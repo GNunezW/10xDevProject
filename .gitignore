@@ -1,0 +1,6 @@
+.DS_Store
+**/bin/
+**/obj/
+*.scaffold
+**/Properties.scaffold/
+plan-zajec-uczelnia/short-solstice/

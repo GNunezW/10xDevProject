@@ -1,0 +1,6 @@
+@plan_zajec_uczelnia_HostAddress = http://localhost:5223
+
+GET {{plan_zajec_uczelnia_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
