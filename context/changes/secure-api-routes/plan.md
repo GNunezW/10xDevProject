@@ -127,12 +127,12 @@ builder.Services.AddAuthorization(options =>
 
 #### Automated
 
-- [x] 1.1 `dotnet build` — 0 błędów, 0 ostrzeżeń
-- [x] 1.2 `dotnet run` uruchamia się bez błędów
+- [x] 1.1 `dotnet build` — 0 błędów, 0 ostrzeżeń — 1745f9a
+- [x] 1.2 `dotnet run` uruchamia się bez błędów — 1745f9a
 
 #### Manual
 
-- [x] 1.3 POST /auth/login z poprawnymi danymi → 200 z tokenem
-- [x] 1.4 GET /weatherforecast bez tokenu → 200
-- [x] 1.5 GET /openapi/v1.json bez tokenu → 200 (dev)
-- [x] 1.6 POST /auth/login bez body → 400 (nie 401)
+- [x] 1.3 POST /auth/login z poprawnymi danymi → 200 z tokenem — 1745f9a
+- [x] 1.4 GET /weatherforecast bez tokenu → 200 — 1745f9a
+- [x] 1.5 GET /openapi/v1.json bez tokenu → 200 (dev) — 1745f9a
+- [x] 1.6 POST /auth/login bez body → 400 (nie 401) — 1745f9a

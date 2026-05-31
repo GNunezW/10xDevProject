@@ -1,9 +1,9 @@
 ---
 id: secure-api-routes
 title: Zabezpieczenie tras API (F-01)
-status: implementing
+status: implemented
 created: 2026-05-31
-updated: 2026-05-31
+updated: 2026-06-01
 roadmap-ref: F-01
 prd-refs: FR-001
 ---
