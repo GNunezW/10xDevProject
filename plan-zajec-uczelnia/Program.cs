@@ -1,18 +1,72 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using plan_zajec_uczelnia.Data;
+using plan_zajec_uczelnia.Endpoints;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
+{
+    options.Password.RequiredLength = 8;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+})
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders();
+
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException("Jwt:Key is not configured in user-secrets.");
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+    };
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+await SeedCoordinatorAsync(app);
+
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.MapOpenApi().AllowAnonymous();
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapAuthEndpoints();
 
 var summaries = new[]
 {
@@ -21,7 +75,7 @@ var summaries = new[]
 
 app.MapGet("/weatherforecast", () =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
+    var forecast = Enumerable.Range(1, 5).Select(index =>
         new WeatherForecast
         (
             DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
@@ -31,9 +85,29 @@ app.MapGet("/weatherforecast", () =>
         .ToArray();
     return forecast;
 })
-.WithName("GetWeatherForecast");
+.WithName("GetWeatherForecast")
+.AllowAnonymous();
 
 app.Run();
+
+static async Task SeedCoordinatorAsync(WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+    var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+
+    var email = config["Seed:CoordinatorEmail"];
+    var password = config["Seed:CoordinatorPassword"];
+
+    if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+        return;
+
+    if (await userManager.FindByEmailAsync(email) is null)
+    {
+        var user = new AppUser { UserName = email, Email = email, EmailConfirmed = true };
+        await userManager.CreateAsync(user, password);
+    }
+}
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
