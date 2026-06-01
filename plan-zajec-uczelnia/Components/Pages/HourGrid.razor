@@ -1,0 +1,72 @@
+@page "/siatka"
+@rendermode InteractiveServer
+@inject ITimeSlotService TimeSlotService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Siatka godzin</PageTitle>
+
+<MudText Typo="Typo.h5" GutterBottom="true">Siatka godzin</MudText>
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+    Bloki 90-minutowe. Okno zajęć: 8:00–20:00.
+</MudText>
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+           OnClick="OpenAddDialog" Class="mb-4">
+    Dodaj slot
+</MudButton>
+
+<MudList T="TimeSlot" Dense="true">
+    @foreach (var slot in _slots)
+    {
+        var endTime = slot.StartTime.Add(TimeSpan.FromMinutes(90));
+        <MudListItem>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudText>@slot.StartTime.ToString("HH\\:mm") – @endTime.ToString("HH\\:mm")</MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                               OnClick="@(() => DeleteAsync(slot))" />
+            </MudStack>
+        </MudListItem>
+    }
+</MudList>
+
+@if (!_slots.Any())
+{
+    <MudText Typo="Typo.body2" Color="Color.Secondary">Brak zdefiniowanych slotów.</MudText>
+}
+
+@code {
+    private List<TimeSlot> _slots = [];
+
+    protected override async Task OnInitializedAsync() =>
+        _slots = await TimeSlotService.GetAllAsync();
+
+    private async Task OpenAddDialog()
+    {
+        var dialog = await DialogService.ShowAsync<HourGridAddDialog>("Dodaj slot godzinowy");
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            _slots = await TimeSlotService.GetAllAsync();
+            Snackbar.Add("Slot dodany.", Severity.Success);
+        }
+    }
+
+    private async Task DeleteAsync(TimeSlot slot)
+    {
+        var endTime = slot.StartTime.Add(TimeSpan.FromMinutes(90));
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { d => d.Message, $"Usuń slot {slot.StartTime:HH\\:mm} – {endTime:HH\\:mm}?" },
+            { d => d.YesText, "Usuń" }
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Potwierdź usunięcie", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await TimeSlotService.DeleteAsync(slot.Id);
+            _slots = await TimeSlotService.GetAllAsync();
+            Snackbar.Add("Slot usunięty.", Severity.Success);
+        }
+    }
+}

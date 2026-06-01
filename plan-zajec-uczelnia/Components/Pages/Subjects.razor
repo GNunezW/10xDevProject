@@ -1,0 +1,125 @@
+@page "/przedmioty"
+@rendermode InteractiveServer
+@inject ISubjectService SubjectService
+@inject IStudyProgramService ProgramService
+@inject ILecturerService LecturerService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Przedmioty</PageTitle>
+
+<MudText Typo="Typo.h5" GutterBottom="true">Przedmioty</MudText>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="3">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+               OnClick="OpenAddDialog">
+        Dodaj przedmiot
+    </MudButton>
+    <MudSelect T="int?" Value="_filterProgramId" Label="Filtruj kierunek" Style="min-width:220px"
+               Clearable="true" ValueChanged="OnFilterChanged">
+        @foreach (var p in _programs)
+        {
+            <MudSelectItem T="int?" Value="p.Id">@p.Name (@p.AcademicYear)</MudSelectItem>
+        }
+    </MudSelect>
+</MudStack>
+
+<MudDataGrid T="Subject" Items="_subjects" Hover="true" Striped="true" Dense="true">
+    <Columns>
+        <PropertyColumn Property="s => s.Name" Title="Nazwa" />
+        <TemplateColumn Title="Kierunek">
+            <CellTemplate>@context.Item.StudyProgram?.Name</CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="s => s.Semester" Title="Semestr" />
+        <TemplateColumn Title="Liczba zajęć">
+            <CellTemplate>@context.Item.NumberOfSessions × 90 min</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Prowadzący">
+            <CellTemplate>
+                @string.Join(", ", context.Item.SubjectLecturers
+                    .Select(sl => $"{sl.Lecturer.FirstName} {sl.Lecturer.LastName}"))
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Akcje" CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                               OnClick="@(() => OpenEditDialog(context.Item))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                               OnClick="@(() => DeleteAsync(context.Item))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private List<Subject> _subjects = [];
+    private List<StudyProgram> _programs = [];
+    private List<Lecturer> _lecturers = [];
+    private int? _filterProgramId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _programs = await ProgramService.GetAllAsync();
+        _lecturers = await LecturerService.GetAllAsync();
+        _subjects = await SubjectService.GetAllAsync();
+    }
+
+    private async Task OnFilterChanged(int? value)
+    {
+        _filterProgramId = value;
+        _subjects = await SubjectService.GetAllAsync(_filterProgramId);
+    }
+
+    private async Task OpenAddDialog()
+    {
+        await ShowDialog(new Subject(), [], false);
+    }
+
+    private async Task OpenEditDialog(Subject subject)
+    {
+        var full = await SubjectService.GetByIdWithLecturersAsync(subject.Id);
+        var currentLecturerIds = full?.SubjectLecturers.Select(sl => sl.LecturerId).ToList() ?? [];
+        await ShowDialog(new Subject
+        {
+            Id = subject.Id,
+            Name = subject.Name,
+            StudyProgramId = subject.StudyProgramId,
+            Semester = subject.Semester,
+            NumberOfSessions = subject.NumberOfSessions
+        }, currentLecturerIds, true);
+    }
+
+    private async Task ShowDialog(Subject model, List<int> selectedLecturerIds, bool isEdit)
+    {
+        var parameters = new DialogParameters<SubjectDialog>
+        {
+            { d => d.Model, model },
+            { d => d.IsEdit, isEdit },
+            { d => d.Programs, _programs },
+            { d => d.AllLecturers, _lecturers },
+            { d => d.SelectedLecturerIds, selectedLecturerIds }
+        };
+        var dialog = await DialogService.ShowAsync<SubjectDialog>(
+            isEdit ? "Edytuj przedmiot" : "Dodaj przedmiot", parameters);
+        var result = await dialog.Result;
+        if (!result!.Canceled)
+            _subjects = await SubjectService.GetAllAsync(_filterProgramId);
+    }
+
+    private async Task DeleteAsync(Subject subject)
+    {
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { d => d.Message, $"Czy na pewno chcesz usunąć przedmiot \"{subject.Name}\"?" },
+            { d => d.YesText, "Usuń" }
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Potwierdź usunięcie", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await SubjectService.DeleteAsync(subject.Id);
+            _subjects = await SubjectService.GetAllAsync(_filterProgramId);
+            Snackbar.Add("Przedmiot usunięty.", Severity.Success);
+        }
+    }
+}

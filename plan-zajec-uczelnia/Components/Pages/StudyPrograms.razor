@@ -1,0 +1,99 @@
+@page "/kierunki"
+@rendermode InteractiveServer
+@inject IStudyProgramService ProgramService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Kierunki studiów</PageTitle>
+
+<MudText Typo="Typo.h5" GutterBottom="true">Kierunki studiów</MudText>
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+           OnClick="OpenAddDialog" Class="mb-4">
+    Dodaj kierunek
+</MudButton>
+
+<MudDataGrid T="StudyProgram" Items="_programs" Hover="true" Striped="true" Dense="true">
+    <Columns>
+        <PropertyColumn Property="p => p.Name" Title="Nazwa" />
+        <TemplateColumn Title="Tryb">
+            <CellTemplate>
+                @(context.Item.StudyMode == StudyMode.FullTime ? "Stacjonarny" : "Niestacjonarny")
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="p => p.AcademicYear" Title="Rok akademicki" />
+        <TemplateColumn Title="Akcje" CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                               OnClick="@(() => OpenEditDialog(context.Item))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                               OnClick="@(() => DeleteAsync(context.Item))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private List<StudyProgram> _programs = [];
+    private StudyProgram _model = new();
+    private bool _isEdit;
+
+    protected override async Task OnInitializedAsync() =>
+        _programs = await ProgramService.GetAllAsync();
+
+    private async Task OpenAddDialog()
+    {
+        _model = new StudyProgram();
+        _isEdit = false;
+        await ShowDialog();
+    }
+
+    private async Task OpenEditDialog(StudyProgram program)
+    {
+        _model = new StudyProgram
+        {
+            Id = program.Id,
+            Name = program.Name,
+            StudyMode = program.StudyMode,
+            AcademicYear = program.AcademicYear
+        };
+        _isEdit = true;
+        await ShowDialog();
+    }
+
+    private async Task ShowDialog()
+    {
+        var parameters = new DialogParameters<StudyProgramDialog>
+        {
+            { d => d.Model, _model },
+            { d => d.IsEdit, _isEdit }
+        };
+        var dialog = await DialogService.ShowAsync<StudyProgramDialog>(
+            _isEdit ? "Edytuj kierunek" : "Dodaj kierunek", parameters);
+        var result = await dialog.Result;
+        if (!result!.Canceled)
+            _programs = await ProgramService.GetAllAsync();
+    }
+
+    private async Task DeleteAsync(StudyProgram program)
+    {
+        var hasSubjects = await ProgramService.HasSubjectsAsync(program.Id);
+        var message = hasSubjects
+            ? $"Kierunek \"{program.Name}\" ma przypisane przedmioty — zostaną usunięte kaskadowo. Czy na pewno?"
+            : $"Czy na pewno chcesz usunąć kierunek \"{program.Name}\"?";
+
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { d => d.Message, message },
+            { d => d.YesText, "Usuń" }
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Potwierdź usunięcie", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await ProgramService.DeleteAsync(program.Id);
+            _programs = await ProgramService.GetAllAsync();
+            Snackbar.Add("Kierunek usunięty.", Severity.Success);
+        }
+    }
+}

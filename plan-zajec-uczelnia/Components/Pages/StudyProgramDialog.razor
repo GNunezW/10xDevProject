@@ -1,0 +1,72 @@
+@inject IStudyProgramService ProgramService
+@inject ISemesterPeriodService SemesterService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" Model="Model">
+            <MudTextField @bind-Value="Model.Name" Label="Nazwa kierunku" Required="true"
+                          MaxLength="200" Class="mb-3" />
+            <MudSelect T="StudyMode" @bind-Value="Model.StudyMode" Label="Tryb studiów" Class="mb-3">
+                <MudSelectItem Value="StudyMode.FullTime">Stacjonarny</MudSelectItem>
+                <MudSelectItem Value="StudyMode.PartTime">Niestacjonarny</MudSelectItem>
+            </MudSelect>
+            @if (_academicYears.Any())
+            {
+                <MudSelect T="string" @bind-Value="Model.AcademicYear" Label="Rok akademicki" Required="true">
+                    @foreach (var year in _academicYears)
+                    {
+                        <MudSelectItem Value="year">@year</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Warning">
+                    Brak zdefiniowanych lat akademickich. Najpierw dodaj semestr w <strong>Kalendarze semestrów</strong>.
+                </MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Anuluj</MudButton>
+        <MudButton Color="Color.Primary" OnClick="SubmitAsync" Disabled="!_academicYears.Any()">Zapisz</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public StudyProgram Model { get; set; } = new();
+    [Parameter] public bool IsEdit { get; set; }
+
+    private MudForm _form = default!;
+    private List<string> _academicYears = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var periods = await SemesterService.GetAllAsync();
+        _academicYears = periods.Select(p => p.AcademicYear).Distinct().Order().ToList();
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        try
+        {
+            if (IsEdit)
+                await ProgramService.UpdateAsync(Model);
+            else
+                await ProgramService.CreateAsync(Model);
+
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Błąd: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

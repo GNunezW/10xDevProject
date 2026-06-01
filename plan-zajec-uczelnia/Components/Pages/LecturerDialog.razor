@@ -1,0 +1,53 @@
+@inject ILecturerService LecturerService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" Model="Model">
+            <MudTextField @bind-Value="Model.FirstName" Label="Imię" Required="true"
+                          MaxLength="100" Class="mb-3" />
+            <MudTextField @bind-Value="Model.LastName" Label="Nazwisko" Required="true"
+                          MaxLength="100" Class="mb-3" />
+            <MudTextField @bind-Value="Model.Email" Label="Email" Required="true"
+                          MaxLength="200" InputType="InputType.Email" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Anuluj</MudButton>
+        <MudButton Color="Color.Primary" OnClick="SubmitAsync">Zapisz</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Lecturer Model { get; set; } = new();
+    [Parameter] public bool IsEdit { get; set; }
+
+    private MudForm _form = default!;
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        try
+        {
+            if (IsEdit)
+                await LecturerService.UpdateAsync(Model);
+            else
+                await LecturerService.CreateAsync(Model);
+
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            Snackbar.Add("Prowadzący z tym adresem email już istnieje.", Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Błąd: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

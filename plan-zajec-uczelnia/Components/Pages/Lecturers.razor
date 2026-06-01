@@ -1,0 +1,90 @@
+@page "/prowadzacy"
+@rendermode InteractiveServer
+@inject ILecturerService LecturerService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Prowadzący</PageTitle>
+
+<MudText Typo="Typo.h5" GutterBottom="true">Prowadzący</MudText>
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+           OnClick="OpenAddDialog" Class="mb-4">
+    Dodaj prowadzącego
+</MudButton>
+
+<MudDataGrid T="Lecturer" Items="_lecturers" Hover="true" Striped="true" Dense="true">
+    <Columns>
+        <PropertyColumn Property="l => l.FirstName" Title="Imię" />
+        <PropertyColumn Property="l => l.LastName" Title="Nazwisko" />
+        <PropertyColumn Property="l => l.Email" Title="Email" />
+        <TemplateColumn Title="Akcje" CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                               OnClick="@(() => OpenEditDialog(context.Item))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                               OnClick="@(() => DeleteAsync(context.Item))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private List<Lecturer> _lecturers = [];
+    private Lecturer _model = new();
+    private bool _isEdit;
+
+    protected override async Task OnInitializedAsync() =>
+        _lecturers = await LecturerService.GetAllAsync();
+
+    private async Task OpenAddDialog()
+    {
+        _model = new Lecturer();
+        _isEdit = false;
+        await ShowDialog();
+    }
+
+    private async Task OpenEditDialog(Lecturer lecturer)
+    {
+        _model = new Lecturer
+        {
+            Id = lecturer.Id,
+            FirstName = lecturer.FirstName,
+            LastName = lecturer.LastName,
+            Email = lecturer.Email
+        };
+        _isEdit = true;
+        await ShowDialog();
+    }
+
+    private async Task ShowDialog()
+    {
+        var parameters = new DialogParameters<LecturerDialog>
+        {
+            { d => d.Model, _model },
+            { d => d.IsEdit, _isEdit }
+        };
+        var dialog = await DialogService.ShowAsync<LecturerDialog>(
+            _isEdit ? "Edytuj prowadzącego" : "Dodaj prowadzącego", parameters);
+        var result = await dialog.Result;
+        if (!result!.Canceled)
+            _lecturers = await LecturerService.GetAllAsync();
+    }
+
+    private async Task DeleteAsync(Lecturer lecturer)
+    {
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { d => d.Message, $"Czy na pewno chcesz usunąć prowadzącego \"{lecturer.FirstName} {lecturer.LastName}\"?" },
+            { d => d.YesText, "Usuń" }
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Potwierdź usunięcie", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await LecturerService.DeleteAsync(lecturer.Id);
+            _lecturers = await LecturerService.GetAllAsync();
+            Snackbar.Add("Prowadzący usunięty.", Severity.Success);
+        }
+    }
+}

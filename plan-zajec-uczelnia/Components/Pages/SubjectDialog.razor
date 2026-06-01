@@ -1,0 +1,80 @@
+@inject ISubjectService SubjectService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" Model="Model">
+            <MudTextField @bind-Value="Model.Name" Label="Nazwa przedmiotu" Required="true"
+                          MaxLength="200" Class="mb-3" />
+            <MudSelect T="int" @bind-Value="Model.StudyProgramId" Label="Kierunek" Required="true" Class="mb-3">
+                @foreach (var p in Programs)
+                {
+                    <MudSelectItem Value="p.Id">@p.Name (@p.AcademicYear)</MudSelectItem>
+                }
+            </MudSelect>
+            <MudNumericField T="int" @bind-Value="Model.Semester" Label="Semestr" Min="1" Max="7"
+                             Required="true" Class="mb-3" />
+            <MudNumericField T="int" @bind-Value="Model.NumberOfSessions"
+                             Label="Liczba zajęć w semestrze (× 90 min)" Min="1"
+                             Required="true" Class="mb-3" />
+            <MudSelect T="int" MultiSelection="true"
+                       SelectedValues="_selectedIds"
+                       SelectedValuesChanged="OnSelectedChanged"
+                       Label="Prowadzący" Class="mb-3">
+                @foreach (var l in AllLecturers)
+                {
+                    <MudSelectItem T="int" Value="l.Id">@l.FirstName @l.LastName</MudSelectItem>
+                }
+            </MudSelect>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Anuluj</MudButton>
+        <MudButton Color="Color.Primary" OnClick="SubmitAsync">Zapisz</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Subject Model { get; set; } = new();
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public List<StudyProgram> Programs { get; set; } = [];
+    [Parameter] public List<Lecturer> AllLecturers { get; set; } = [];
+    [Parameter] public List<int> SelectedLecturerIds { get; set; } = [];
+
+    private IReadOnlyCollection<int> _selectedIds = [];
+    private MudForm _form = default!;
+
+    protected override void OnParametersSet()
+    {
+        _selectedIds = SelectedLecturerIds.AsReadOnly();
+    }
+
+    private void OnSelectedChanged(IReadOnlyCollection<int> values)
+    {
+        _selectedIds = values;
+        SelectedLecturerIds = values.ToList();
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        try
+        {
+            if (IsEdit)
+                await SubjectService.UpdateAsync(Model, SelectedLecturerIds);
+            else
+                await SubjectService.CreateAsync(Model, SelectedLecturerIds);
+
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Błąd: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

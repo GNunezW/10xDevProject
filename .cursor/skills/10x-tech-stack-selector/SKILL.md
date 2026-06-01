@@ -1,4 +1,3 @@
-```
 ---
 name: 10x-tech-stack-selector
 description: >
@@ -12,13 +11,12 @@ description: >
   framework", "co wybrać do projektu", or has a PRD on disk and is ready to
   scaffold. Use AFTER /10x-prd, BEFORE /10x-bootstrapper.
 ---
-```
 
 # Tech Stack Selector: From PRD to Starter
 
 This skill is the third link in the bootstrap chain (`/10x-shape → /10x-prd → 10x-tech-stack-selector → /10x-bootstrapper`). Its single job: turn a written PRD into a recommended starter and a small machine-readable hand-off `/10x-bootstrapper` can read to scaffold a project.
 
-The skill is a **decision facilitator over a curated registry**, not a recommendation generator from first principles. It reads PRD priors, asks at most ~6 residual questions on the custom path (or short-circuits to a vetted recommendation on the standard path), reasons over language-aware starter cards in `references/starter-registry.yaml`, and applies four hard-filter quality gates. Rich rationale stays in conversation; the file hand-off is minimal.
+The skill is a **decision facilitator over a curated registry**, not a recommendation engine from first principles. It reads PRD priors, asks at most ~6 residual questions on the custom path (or short-circuits to a vetted recommendation on the standard path), reasons over language-aware starter cards in `references/starter-registry.yaml`, and applies four hard-filter quality gates. Rich rationale stays in conversation; the file hand-off is minimal.
 
 The starter registry in `references/starter-registry.yaml` is the **single source of truth** for available starters. `/10x-bootstrapper` reads it; a CI validator (`scripts/validate-starter-registry-sync.mjs`) prevents bootstrapper from referencing a `starter_id` that does not exist here.
 
@@ -109,8 +107,6 @@ PRD priors:
     - ...
 ```
 
-Ask one confirmation:
-
 Ask the user:
 - question: "Are these priors correct, or do you want to correct anything before we proceed?"
   header: "Priors"
@@ -185,9 +181,7 @@ test -f context/foundation/tech-stack.md
 
 If the file does not exist, write `context/foundation/tech-stack.md` with the validated content.
 
-If the file exists, ask:
-
-Ask the user:
+If the file exists, ask the user:
 - question: "context/foundation/tech-stack.md already exists. How would you like to proceed?"
   header: "Collision"
   options:

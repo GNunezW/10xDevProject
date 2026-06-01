@@ -1,0 +1,91 @@
+@page "/semestry"
+@rendermode InteractiveServer
+@inject ISemesterPeriodService SemesterService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Kalendarze semestrów</PageTitle>
+
+<MudText Typo="Typo.h5" GutterBottom="true">Kalendarze semestrów</MudText>
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+    Daty początku i końca semestru zimowego i letniego dla każdego roku akademickiego.
+</MudText>
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+           OnClick="OpenAddDialog" Class="mb-4">
+    Dodaj semestr
+</MudButton>
+
+<MudDataGrid T="SemesterPeriod" Items="_periods" Hover="true" Striped="true" Dense="true">
+    <Columns>
+        <PropertyColumn Property="p => p.AcademicYear" Title="Rok akademicki" />
+        <TemplateColumn Title="Semestr">
+            <CellTemplate>@(context.Item.SemesterOrdinal == 1 ? "Zimowy" : "Letni")</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Początek">
+            <CellTemplate>@context.Item.StartDate.ToString("dd.MM.yyyy")</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Koniec">
+            <CellTemplate>@context.Item.EndDate.ToString("dd.MM.yyyy")</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Akcje" CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                               OnClick="@(() => OpenEditDialog(context.Item))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                               OnClick="@(() => DeleteAsync(context.Item))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private List<SemesterPeriod> _periods = [];
+
+    protected override async Task OnInitializedAsync() =>
+        _periods = await SemesterService.GetAllAsync();
+
+    private async Task OpenAddDialog() => await ShowDialog(new SemesterPeriod(), false);
+
+    private async Task OpenEditDialog(SemesterPeriod p) =>
+        await ShowDialog(new SemesterPeriod
+        {
+            Id = p.Id,
+            AcademicYear = p.AcademicYear,
+            SemesterOrdinal = p.SemesterOrdinal,
+            StartDate = p.StartDate,
+            EndDate = p.EndDate
+        }, true);
+
+    private async Task ShowDialog(SemesterPeriod model, bool isEdit)
+    {
+        var parameters = new DialogParameters<SemesterPeriodDialog>
+        {
+            { d => d.Model, model },
+            { d => d.IsEdit, isEdit }
+        };
+        var dialog = await DialogService.ShowAsync<SemesterPeriodDialog>(
+            isEdit ? "Edytuj semestr" : "Dodaj semestr", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+            _periods = await SemesterService.GetAllAsync();
+    }
+
+    private async Task DeleteAsync(SemesterPeriod p)
+    {
+        var label = p.SemesterOrdinal == 1 ? "zimowy" : "letni";
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { d => d.Message, $"Usuń semestr {label} {p.AcademicYear}?" },
+            { d => d.YesText, "Usuń" }
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Potwierdź usunięcie", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await SemesterService.DeleteAsync(p.Id);
+            _periods = await SemesterService.GetAllAsync();
+            Snackbar.Add("Semestr usunięty.", Severity.Success);
+        }
+    }
+}

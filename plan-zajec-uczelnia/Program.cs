@@ -3,8 +3,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using MudBlazor.Services;
+using plan_zajec_uczelnia.Components;
 using plan_zajec_uczelnia.Data;
 using plan_zajec_uczelnia.Endpoints;
+using plan_zajec_uczelnia.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,6 +56,16 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+builder.Services.AddMudServices();
+
+builder.Services.AddScoped<IStudyProgramService, StudyProgramService>();
+builder.Services.AddScoped<ILecturerService, LecturerService>();
+builder.Services.AddScoped<ISubjectService, SubjectService>();
+builder.Services.AddScoped<ITimeSlotService, TimeSlotService>();
+builder.Services.AddScoped<ISemesterPeriodService, SemesterPeriodService>();
+
 var app = builder.Build();
 
 await SeedCoordinatorAsync(app);
@@ -63,10 +76,16 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseAntiforgery();
 
 app.MapAuthEndpoints();
+
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode()
+    .AllowAnonymous();
 
 var summaries = new[]
 {

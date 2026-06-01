@@ -1,0 +1,44 @@
+@inject ITimeSlotService TimeSlotService
+
+<MudDialog>
+    <DialogContent>
+        <MudTimePicker @bind-Time="_pickedTime" Label="Godzina startu" AmPm="false" Class="mb-2" />
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            Dozwolone godziny: 08:00 – 18:30 (blok kończy się o 20:00).
+        </MudText>
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-2">@_error</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Anuluj</MudButton>
+        <MudButton Color="Color.Primary" OnClick="SubmitAsync">Dodaj</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private TimeSpan? _pickedTime = new TimeSpan(8, 0, 0);
+    private string? _error;
+
+    private async Task SubmitAsync()
+    {
+        _error = null;
+        if (_pickedTime is null) { _error = "Wybierz godzinę."; return; }
+
+        try
+        {
+            var slot = new TimeSlot { StartTime = TimeOnly.FromTimeSpan(_pickedTime.Value) };
+            await TimeSlotService.CreateAsync(slot);
+            MudDialog.Close(DialogResult.Ok(slot));
+        }
+        catch (InvalidOperationException ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

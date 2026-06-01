@@ -1,0 +1,72 @@
+@inject ISemesterPeriodService SemesterService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" Model="Model">
+            <MudTextField @bind-Value="Model.AcademicYear" Label="Rok akademicki (np. 2025/2026)"
+                          Required="true" MaxLength="20" Class="mb-3" />
+            <MudSelect T="int" @bind-Value="Model.SemesterOrdinal" Label="Semestr" Required="true" Class="mb-3">
+                <MudSelectItem Value="1">Zimowy</MudSelectItem>
+                <MudSelectItem Value="2">Letni</MudSelectItem>
+            </MudSelect>
+            <MudDatePicker @bind-Date="_startDate" Label="Początek semestru" Required="true"
+                           DateFormat="dd.MM.yyyy" Class="mb-3" />
+            <MudDatePicker @bind-Date="_endDate" Label="Koniec semestru" Required="true"
+                           DateFormat="dd.MM.yyyy" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Anuluj</MudButton>
+        <MudButton Color="Color.Primary" OnClick="SubmitAsync">Zapisz</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public SemesterPeriod Model { get; set; } = new();
+    [Parameter] public bool IsEdit { get; set; }
+
+    private MudForm _form = default!;
+    private DateTime? _startDate;
+    private DateTime? _endDate;
+
+    protected override void OnParametersSet()
+    {
+        _startDate = Model.StartDate == default ? null : Model.StartDate.ToDateTime(TimeOnly.MinValue);
+        _endDate = Model.EndDate == default ? null : Model.EndDate.ToDateTime(TimeOnly.MinValue);
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+        if (_startDate is null || _endDate is null)
+        {
+            Snackbar.Add("Podaj daty początku i końca semestru.", Severity.Warning);
+            return;
+        }
+
+        Model.StartDate = DateOnly.FromDateTime(_startDate.Value);
+        Model.EndDate = DateOnly.FromDateTime(_endDate.Value);
+
+        try
+        {
+            if (IsEdit)
+                await SemesterService.UpdateAsync(Model);
+            else
+                await SemesterService.CreateAsync(Model);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (InvalidOperationException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Błąd: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

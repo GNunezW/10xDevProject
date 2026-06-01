@@ -14,7 +14,9 @@ tech_stack:
 
 **Deploy on Azure App Service (Linux, .NET 10 runtime).**
 
-This matches the hand-off (`deployment_target: azure-app-service`), your hyperscaler familiarity, single-region (West Europe) needs, and co-location preference: API and Azure Database for PostgreSQL Flexible Server live in one subscription. Compute can start on **F1 Free** for learning/MVP trials; PostgreSQL has no free tier (~$12+/month on Burstable B1ms) but supports **stop/start** to limit dev cost. Scoring favors Azure on native .NET support, `az` CLI deploy/rollback, Learn docs, and **Azure MCP Server** (GA, checked 2026-05-21). Cost sensitivity is addressed by F1 for the app and stopping the DB when idle—not by switching to JS-only PaaS that cannot host this API.
+This matches the hand-off (`deployment_target: azure-app-service`), your hyperscaler familiarity, single-region needs, and co-location preference: API and Azure Database for PostgreSQL Flexible Server live in one subscription. Compute can start on **F1 Free** for learning/MVP trials; PostgreSQL has no free tier (~$12+/month on Burstable B1ms) but supports **stop/start** to limit dev cost. Scoring favors Azure on native .NET support, `az` CLI deploy/rollback, Learn docs, and **Azure MCP Server** (GA, checked 2026-05-21). Cost sensitivity is addressed by F1 for the app and stopping the DB when idle—not by switching to JS-only PaaS that cannot host this API.
+
+> **Region correction (2026-05-26):** Subscription policy (`listOfAllowedLocations`) restricts deployments to `polandcentral`, `swedencentral`, `germanywestcentral`, `spaincentral`, `francecentral`. **Deployed to `polandcentral`** — optimal for a Polish university app. All future resources (Postgres, CI) must use one of the allowed regions.
 
 ## Platform Comparison
 
@@ -91,9 +93,9 @@ The team deployed the coordinator API to Azure App Service F1 in West Europe and
 
 1. Install Azure CLI if missing: `brew install azure-cli` (macOS) and `az login`.
 2. Register resource providers: `az provider register --namespace Microsoft.Web --wait` and `Microsoft.DBforPostgreSQL`.
-3. Create RG in West Europe: `az group create --name rg-plan-zajec-uczelnia --location westeurope`.
-4. Scaffold web app (from repo root): `cd plan-zajec-uczelnia && az webapp up --sku F1 --name <unique-app-name> --os-type linux --runtime "DOTNET:10"`.
-5. Create PostgreSQL Flexible Server (Burstable, dev): `az postgres flexible-server create --resource-group rg-plan-zajec-uczelnia --name <unique-pg-name> --location westeurope --tier Burstable --sku-name Standard_B1ms --version 16 --admin-user <admin> --admin-password <pw> --storage-size 32`.
+3. Create RG in Poland Central: `az group create --name rg-plan-zajec-uczelnia --location polandcentral`.
+4. Scaffold web app: `cd plan-zajec-uczelnia && az webapp up --sku F1 --name <unique-app-name> --resource-group rg-plan-zajec-uczelnia --location polandcentral --os-type linux --runtime "DOTNETCORE:10.0"`.
+5. Create PostgreSQL Flexible Server (Burstable, dev): `az postgres flexible-server create --resource-group rg-plan-zajec-uczelnia --name <unique-pg-name> --location polandcentral --tier Burstable --sku-name Standard_B1ms --version 16 --admin-user <admin> --admin-password <pw> --storage-size 32`.
 6. Wire connection string to App Service: `az webapp config connection-string set --resource-group rg-plan-zajec-uczelnia --name <unique-app-name> --settings DefaultConnection="Host=<pg>.postgres.database.azure.com;..." --connection-string-type PostgreSQL`.
 7. Add GitHub Actions deploy workflow via App Service Deployment Center (OIDC) when ready—matches `hints.ci_provider: github-actions` in tech-stack.
 
