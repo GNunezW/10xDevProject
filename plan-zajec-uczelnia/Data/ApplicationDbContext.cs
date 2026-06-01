@@ -13,6 +13,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<SubjectLecturer> SubjectLecturers => Set<SubjectLecturer>();
     public DbSet<TimeSlot> TimeSlots => Set<TimeSlot>();
     public DbSet<SemesterPeriod> SemesterPeriods => Set<SemesterPeriod>();
+    public DbSet<LecturerAvailability> LecturerAvailabilities => Set<LecturerAvailability>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -34,5 +35,20 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.Entity<SemesterPeriod>()
             .HasIndex(sp => new { sp.AcademicYear, sp.SemesterOrdinal })
             .IsUnique();
+
+        modelBuilder.Entity<LecturerAvailability>()
+            .HasKey(la => new { la.LecturerId, la.DayOfWeek, la.TimeSlotId });
+
+        modelBuilder.Entity<LecturerAvailability>()
+            .HasOne(la => la.Lecturer)
+            .WithMany()
+            .HasForeignKey(la => la.LecturerId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<LecturerAvailability>()
+            .HasOne(la => la.TimeSlot)
+            .WithMany()
+            .HasForeignKey(la => la.TimeSlotId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
