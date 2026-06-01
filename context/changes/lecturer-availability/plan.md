@@ -236,19 +236,19 @@ Migracja `AddLecturerAvailability` dodaje tabelę `LecturerAvailabilities` z klu
 
 #### Automated
 
-- [x] 1.1 `dotnet build` — 0 błędów po dodaniu encji
-- [x] 1.2 `dotnet ef migrations add AddLecturerAvailability` — migracja wygenerowana
-- [x] 1.3 `dotnet ef database update` — bez błędów
+- [x] 1.1 `dotnet build` — 0 błędów po dodaniu encji — 306dd62
+- [x] 1.2 `dotnet ef migrations add AddLecturerAvailability` — migracja wygenerowana — 306dd62
+- [x] 1.3 `dotnet ef database update` — bez błędów — 306dd62
 
 #### Manual
 
-- [x] 1.4 Tabela `LecturerAvailabilities` istnieje w bazie
+- [x] 1.4 Tabela `LecturerAvailabilities` istnieje w bazie — 306dd62
 
 ### Phase 2: Warstwa Serwisów
 
 #### Automated
 
-- [ ] 2.1 `dotnet build` — 0 błędów po dodaniu serwisu
+- [x] 2.1 `dotnet build` — 0 błędów po dodaniu serwisu
 
 ### Phase 3: Blazor UI
 
