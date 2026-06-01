@@ -254,11 +254,11 @@ Migracja `AddLecturerAvailability` dodaje tabelę `LecturerAvailabilities` z klu
 
 #### Automated
 
-- [x] 3.1 `dotnet build` — 0 błędów po dodaniu UI
+- [x] 3.1 `dotnet build` — 0 błędów po dodaniu UI — 0eca3fc
 
 #### Manual
 
-- [x] 3.2 Przycisk "Dostępność" widoczny przy każdym prowadzącym
-- [x] 3.3 Zaznaczenie slotów + Zapisz → sukces
-- [x] 3.4 Ponowne otwarcie → zaznaczenia zapamiętane
-- [x] 3.5 POST /auth/login nadal działa (regresja F-01)
+- [x] 3.2 Przycisk "Dostępność" widoczny przy każdym prowadzącym — 0eca3fc
+- [x] 3.3 Zaznaczenie slotów + Zapisz → sukces — 0eca3fc
+- [x] 3.4 Ponowne otwarcie → zaznaczenia zapamiętane — 0eca3fc
+- [x] 3.5 POST /auth/login nadal działa (regresja F-01) — 0eca3fc
