@@ -1,0 +1,101 @@
+@inject ILecturerAvailabilityService AvailabilityService
+@inject ITimeSlotService TimeSlotService
+
+<MudDialog>
+    <DialogContent>
+        @if (_loading)
+        {
+            <MudProgressCircular Indeterminate="true" />
+        }
+        else if (_slots.Count == 0)
+        {
+            <MudText>Brak zdefiniowanych slotów w siatce godzin. Najpierw dodaj godziny w sekcji "Siatka godzin".</MudText>
+        }
+        else
+        {
+            <MudSimpleTable Dense="true" Bordered="true" Striped="false" Style="overflow-x:auto">
+                <thead>
+                    <tr>
+                        <th>Godzina</th>
+                        @foreach (var day in _days)
+                        {
+                            <th style="text-align:center">@DayLabel(day)</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var slot in _slots)
+                    {
+                        <tr>
+                            <td>@slot.StartTime.ToString("HH:mm")</td>
+                            @foreach (var day in _days)
+                            {
+                                <td style="text-align:center">
+                                    <MudCheckBox T="bool"
+                                                 Value="@IsSelected(slot.Id, day)"
+                                                 ValueChanged="@(v => Toggle(slot.Id, day, v))"
+                                                 Color="Color.Primary" />
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Anuluj</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveAsync" Disabled="_loading">Zapisz</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public Lecturer Lecturer { get; set; } = null!;
+
+    private static readonly DayOfWeek[] _days =
+    [
+        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
+        DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday
+    ];
+
+    private List<TimeSlot> _slots = [];
+    private HashSet<(DayOfWeek Day, int TimeSlotId)> _selected = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _slots = await TimeSlotService.GetAllAsync();
+        _selected = await AvailabilityService.GetByLecturerAsync(Lecturer.Id);
+        _loading = false;
+    }
+
+    private bool IsSelected(int slotId, DayOfWeek day) =>
+        _selected.Contains((day, slotId));
+
+    private void Toggle(int slotId, DayOfWeek day, bool value)
+    {
+        if (value) _selected.Add((day, slotId));
+        else _selected.Remove((day, slotId));
+    }
+
+    private async Task SaveAsync()
+    {
+        await AvailabilityService.SaveAsync(Lecturer.Id, _selected);
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private static string DayLabel(DayOfWeek day) => day switch
+    {
+        DayOfWeek.Monday => "Pon",
+        DayOfWeek.Tuesday => "Wt",
+        DayOfWeek.Wednesday => "Śr",
+        DayOfWeek.Thursday => "Czw",
+        DayOfWeek.Friday => "Pt",
+        DayOfWeek.Saturday => "Sb",
+        DayOfWeek.Sunday => "Nd",
+        _ => day.ToString()
+    };
+}

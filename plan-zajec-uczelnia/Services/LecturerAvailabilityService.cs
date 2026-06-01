@@ -8,11 +8,13 @@ public class LecturerAvailabilityService(ApplicationDbContext db) : ILecturerAva
 {
     public async Task<HashSet<(DayOfWeek Day, int TimeSlotId)>> GetByLecturerAsync(int lecturerId)
     {
-        return await db.LecturerAvailabilities
+        var rows = await db.LecturerAvailabilities
             .AsNoTracking()
             .Where(la => la.LecturerId == lecturerId)
-            .Select(la => ValueTuple.Create(la.DayOfWeek, la.TimeSlotId))
-            .ToHashSetAsync();
+            .Select(la => new { la.DayOfWeek, la.TimeSlotId })
+            .ToListAsync();
+
+        return rows.Select(r => (r.DayOfWeek, r.TimeSlotId)).ToHashSet();
     }
 
     public async Task SaveAsync(int lecturerId, IEnumerable<(DayOfWeek Day, int TimeSlotId)> slots)

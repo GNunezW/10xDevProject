@@ -20,6 +20,8 @@
         <PropertyColumn Property="l => l.Email" Title="Email" />
         <TemplateColumn Title="Akcje" CellClass="d-flex justify-end">
             <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" Color="Color.Secondary"
+                               OnClick="@(() => OpenAvailabilityDialog(context.Item))" />
                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
                                OnClick="@(() => OpenEditDialog(context.Item))" />
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
@@ -69,6 +71,20 @@
         var result = await dialog.Result;
         if (!result!.Canceled)
             _lecturers = await LecturerService.GetAllAsync();
+    }
+
+    private async Task OpenAvailabilityDialog(Lecturer lecturer)
+    {
+        var parameters = new DialogParameters<LecturerAvailabilityDialog>
+        {
+            { d => d.Lecturer, lecturer }
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true, CloseOnEscapeKey = true };
+        var dialog = await DialogService.ShowAsync<LecturerAvailabilityDialog>(
+            $"Dostępność — {lecturer.FirstName} {lecturer.LastName}", parameters, options);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+            Snackbar.Add("Dostępność zapisana.", Severity.Success);
     }
 
     private async Task DeleteAsync(Lecturer lecturer)
