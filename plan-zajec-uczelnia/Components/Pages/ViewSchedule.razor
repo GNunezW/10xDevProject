@@ -1,0 +1,134 @@
+@page "/plan/{RunId:int}"
+@rendermode InteractiveServer
+@inject IScheduleViewService ViewService
+@inject NavigationManager Navigation
+
+<PageTitle>Podgląd planu</PageTitle>
+
+@if (_run is null)
+{
+    <MudAlert Severity="Severity.Warning">Nie znaleziono uruchomienia @RunId.</MudAlert>
+    return;
+}
+
+<MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack"
+           Href="/generuj-plan" Class="mb-3">Wróć</MudButton>
+
+<MudText Typo="Typo.h5" GutterBottom="true">Plan zajęć — uruchomienie #@RunId</MudText>
+<MudText Typo="Typo.caption" Class="mb-4">
+    @(_run.StartedAt.ToLocalTime().ToString("g")) — @StatusLabel(_run.Status)
+</MudText>
+
+@if (_run.Status == ScheduleRunStatus.Failed)
+{
+    <MudAlert Severity="Severity.Error">@(_run.ErrorMessage ?? "Generowanie nie powiodło się.")</MudAlert>
+    return;
+}
+
+@if (_run.Status != ScheduleRunStatus.Succeeded)
+{
+    <MudAlert Severity="Severity.Info">Plan nie jest jeszcze gotowy.</MudAlert>
+    return;
+}
+
+<MudSelect T="int" Value="_selectedProgramId" Label="Kierunek" Class="mb-4"
+           ValueChanged="OnProgramChanged">
+    @foreach (var p in _programs)
+    {
+        <MudSelectItem Value="p.Id">@p.Name</MudSelectItem>
+    }
+</MudSelect>
+
+@if (_selectedProgramId > 0)
+{
+    <MudGrid Class="mb-4">
+        @foreach (var m in _gapMetrics)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard>
+                    <MudCardContent>
+                        <MudText Typo="Typo.subtitle2">@DayLabel(m.Day)</MudText>
+                        <MudText>Okienka: @m.GapCount (@m.GapMinutes min)</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+
+    <MudTable Items="_sessions" Dense="true" Hover="true" Striped="true">
+        <HeaderContent>
+            <MudTh>Dzień</MudTh>
+            <MudTh>Godzina</MudTh>
+            <MudTh>Przedmiot</MudTh>
+            <MudTh>Gr.</MudTh>
+            <MudTh>Sesja</MudTh>
+            <MudTh>Sala</MudTh>
+            <MudTh>Prowadzący</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@DayLabel(context.DayOfWeek)</MudTd>
+            <MudTd>@context.TimeSlot.StartTime.ToString("HH\\:mm")</MudTd>
+            <MudTd>@context.Subject.Name</MudTd>
+            <MudTd>@context.GroupIndex</MudTd>
+            <MudTd>@context.SessionIndex</MudTd>
+            <MudTd>@context.RoomNumber</MudTd>
+            <MudTd>@context.Lecturer.FirstName @context.Lecturer.LastName</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    [Parameter] public int RunId { get; set; }
+
+    private ScheduleRun? _run;
+    private List<StudyProgram> _programs = [];
+    private int _selectedProgramId;
+    private List<ScheduledSession> _sessions = [];
+    private IReadOnlyList<DayGapMetrics> _gapMetrics = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _run = await ViewService.GetRunAsync(RunId);
+        if (_run?.Status == ScheduleRunStatus.Succeeded)
+        {
+            _programs = await ViewService.GetProgramsForRunAsync(RunId);
+            if (_programs.Count > 0 && _selectedProgramId == 0)
+            {
+                _selectedProgramId = _programs[0].Id;
+                await LoadProgramDataAsync();
+            }
+        }
+    }
+
+    private async Task OnProgramChanged(int programId)
+    {
+        _selectedProgramId = programId;
+        await LoadProgramDataAsync();
+    }
+
+    private async Task LoadProgramDataAsync()
+    {
+        _sessions = await ViewService.GetSessionsAsync(RunId, _selectedProgramId);
+        _gapMetrics = await ViewService.GetGapMetricsAsync(RunId, _selectedProgramId);
+    }
+
+    private static string StatusLabel(ScheduleRunStatus status) => status switch
+    {
+        ScheduleRunStatus.Succeeded => "Sukces",
+        ScheduleRunStatus.Failed => "Błąd",
+        ScheduleRunStatus.Running => "W toku",
+        _ => status.ToString()
+    };
+
+    private static string DayLabel(DayOfWeek day) => day switch
+    {
+        DayOfWeek.Monday => "Poniedziałek",
+        DayOfWeek.Tuesday => "Wtorek",
+        DayOfWeek.Wednesday => "Środa",
+        DayOfWeek.Thursday => "Czwartek",
+        DayOfWeek.Friday => "Piątek",
+        DayOfWeek.Saturday => "Sobota",
+        DayOfWeek.Sunday => "Niedziela",
+        _ => day.ToString()
+    };
+}

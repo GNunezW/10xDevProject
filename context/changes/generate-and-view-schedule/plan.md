@@ -401,20 +401,20 @@ Strony Blazor: uruchomienie, spinner, lista runów, podgląd per kierunek.
 
 #### Automated
 
-- [x] 1.1 `dotnet build` — 0 błędów po modelu i migracji
-- [x] 1.2 `dotnet ef migrations add AddScheduleRunAndPrimaryLecturer` — migracja wygenerowana
-- [x] 1.3 `dotnet ef database update` — bez błędów
+- [x] 1.1 `dotnet build` — 0 błędów po modelu i migracji — 4e65f1e
+- [x] 1.2 `dotnet ef migrations add AddScheduleRunAndPrimaryLecturer` — migracja wygenerowana — 4e65f1e
+- [x] 1.3 `dotnet ef database update` — bez błędów — 4e65f1e
 
 #### Manual
 
-- [x] 1.4 Tabele run/sesji i IsPrimary w bazie; formularz przedmiotu z głównym prowadzącym
+- [x] 1.4 Tabele run/sesji i IsPrimary w bazie; formularz przedmiotu z głównym prowadzącym — 4e65f1e
 
 ### Phase 2: Walidacja wejścia + OR-Tools
 
 #### Automated
 
-- [ ] 2.1 `dotnet build` — 0 błędów po Google.OrTools i walidacji
-- [ ] 2.2 `dotnet list package --vulnerable` — brak nowych krytycznych
+- [x] 2.1 `dotnet build` — 0 błędów po Google.OrTools i walidacji
+- [x] 2.2 `dotnet list package --vulnerable` — brak nowych krytycznych
 
 #### Manual
 
@@ -424,7 +424,7 @@ Strony Blazor: uruchomienie, spinner, lista runów, podgląd per kierunek.
 
 #### Automated
 
-- [ ] 3.1 `dotnet build` — 0 błędów po solverze
+- [x] 3.1 `dotnet build` — 0 błędów po solverze
 
 #### Manual
 
@@ -436,7 +436,7 @@ Strony Blazor: uruchomienie, spinner, lista runów, podgląd per kierunek.
 
 #### Automated
 
-- [ ] 4.1 `dotnet build` — 0 błędów po UI
+- [x] 4.1 `dotnet build` — 0 błędów po UI
 
 #### Manual
 

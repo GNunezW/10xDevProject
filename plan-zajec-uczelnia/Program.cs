@@ -8,6 +8,7 @@ using plan_zajec_uczelnia.Components;
 using plan_zajec_uczelnia.Data;
 using plan_zajec_uczelnia.Endpoints;
 using plan_zajec_uczelnia.Services;
+using plan_zajec_uczelnia.Services.Scheduling;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -69,6 +70,9 @@ builder.Services.AddScoped<ILecturerAvailabilityService, LecturerAvailabilitySer
 builder.Services.AddScoped<IRoomService, RoomService>();
 builder.Services.AddScoped<IInstructionTypeService, InstructionTypeService>();
 builder.Services.AddScoped<IStudyProgramEnrollmentService, StudyProgramEnrollmentService>();
+builder.Services.AddScoped<IScheduleValidationService, ScheduleValidationService>();
+builder.Services.AddScoped<IScheduleGenerationService, ScheduleGenerationService>();
+builder.Services.AddScoped<IScheduleViewService, ScheduleViewService>();
 
 var app = builder.Build();
 
@@ -86,6 +90,7 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapAuthEndpoints();
+app.MapScheduleEndpoints();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

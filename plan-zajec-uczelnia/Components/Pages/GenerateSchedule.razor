@@ -1,0 +1,129 @@
+@page "/generuj-plan"
+@rendermode InteractiveServer
+@inject IScheduleValidationService ValidationService
+@inject IScheduleGenerationService GenerationService
+@inject IScheduleViewService ViewService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>Generuj plan</PageTitle>
+
+<MudText Typo="Typo.h5" GutterBottom="true">Generowanie planu zajęć</MudText>
+
+<MudText Typo="Typo.body2" Class="mb-4">
+    Jedno uruchomienie układa plan dla wszystkich kierunków (globalna alokacja sal). Limit solvera: 60 s.
+</MudText>
+
+@if (_validation is not null)
+{
+    @if (_validation.CanRun)
+    {
+        <MudAlert Severity="Severity.Success" Class="mb-3">Dane wejściowe gotowe do generowania.</MudAlert>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-3">Uzupełnij dane przed generowaniem:</MudAlert>
+        <MudList T="string" Dense="true" Class="mb-3">
+            @foreach (var issue in _validation.Issues)
+            {
+                <MudListItem>@issue</MudListItem>
+            }
+        </MudList>
+    }
+}
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PlayArrow"
+           Disabled="_generating || _validation is null || !_validation.CanRun"
+           OnClick="GenerateAsync" Class="mb-4">
+    Generuj plan
+</MudButton>
+
+@if (_generating)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+    <MudText>Trwa generowanie (do 60 s)…</MudText>
+}
+
+@if (!string.IsNullOrEmpty(_lastError))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_lastError</MudAlert>
+}
+
+<MudText Typo="Typo.h6" Class="mb-2">Ostatnie uruchomienia</MudText>
+<MudTable Items="_runs" Dense="true" Hover="true">
+    <HeaderContent>
+        <MudTh>Data</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.StartedAt.ToLocalTime().ToString("g")</MudTd>
+        <MudTd>@StatusLabel(context.Status)</MudTd>
+        <MudTd>
+            @if (context.Status == ScheduleRunStatus.Succeeded)
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Text"
+                           Href="@($"/plan/{context.Id}")">Podgląd</MudButton>
+            }
+            else if (context.Status == ScheduleRunStatus.Failed && !string.IsNullOrEmpty(context.ErrorMessage))
+            {
+                <MudText Typo="Typo.caption">@context.ErrorMessage</MudText>
+            }
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private ScheduleValidationResult? _validation;
+    private List<ScheduleRun> _runs = [];
+    private bool _generating;
+    private string? _lastError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _validation = await ValidationService.ValidateAsync();
+        _runs = await ViewService.GetRecentRunsAsync();
+    }
+
+    private async Task GenerateAsync()
+    {
+        _generating = true;
+        _lastError = null;
+        StateHasChanged();
+
+        try
+        {
+            var run = await GenerationService.GenerateAsync();
+            _runs = await ViewService.GetRecentRunsAsync();
+
+            if (run.Status == ScheduleRunStatus.Succeeded)
+            {
+                Snackbar.Add("Plan wygenerowany.", Severity.Success);
+                Navigation.NavigateTo($"/plan/{run.Id}");
+            }
+            else
+            {
+                _lastError = run.ErrorMessage ?? "Generowanie nie powiodło się.";
+                Snackbar.Add(_lastError, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _lastError = ex.Message;
+            Snackbar.Add(_lastError, Severity.Error);
+        }
+        finally
+        {
+            _generating = false;
+            _validation = await ValidationService.ValidateAsync();
+        }
+    }
+
+    private static string StatusLabel(ScheduleRunStatus status) => status switch
+    {
+        ScheduleRunStatus.Running => "W toku",
+        ScheduleRunStatus.Succeeded => "Sukces",
+        ScheduleRunStatus.Failed => "Błąd",
+        _ => status.ToString()
+    };
+}
