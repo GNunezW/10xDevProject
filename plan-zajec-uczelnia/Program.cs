@@ -66,6 +66,8 @@ builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<ITimeSlotService, TimeSlotService>();
 builder.Services.AddScoped<ISemesterPeriodService, SemesterPeriodService>();
 builder.Services.AddScoped<ILecturerAvailabilityService, LecturerAvailabilityService>();
+builder.Services.AddScoped<IRoomService, RoomService>();
+builder.Services.AddScoped<IRoomAvailabilityService, RoomAvailabilityService>();
 
 var app = builder.Build();
 

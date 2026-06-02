@@ -300,19 +300,19 @@ Migracja `AddRoomsAndPreferences` dodaje tabele `Rooms` (PK string), `RoomAvaila
 
 #### Automated
 
-- [x] 1.1 `dotnet build` — 0 błędów po dodaniu encji
-- [x] 1.2 `dotnet ef migrations add AddRoomsAndPreferences` — migracja wygenerowana
-- [x] 1.3 `dotnet ef database update` — bez błędów
+- [x] 1.1 `dotnet build` — 0 błędów po dodaniu encji — f244eac
+- [x] 1.2 `dotnet ef migrations add AddRoomsAndPreferences` — migracja wygenerowana — f244eac
+- [x] 1.3 `dotnet ef database update` — bez błędów — f244eac
 
 #### Manual
 
-- [x] 1.4 Tabele `Rooms`, `RoomAvailabilities` i kolumna `Subjects.PreferredRoomNumber` istnieją w bazie
+- [x] 1.4 Tabele `Rooms`, `RoomAvailabilities` i kolumna `Subjects.PreferredRoomNumber` istnieją w bazie — f244eac
 
 ### Phase 2: Warstwa Serwisów
 
 #### Automated
 
-- [ ] 2.1 `dotnet build` — 0 błędów po dodaniu serwisów
+- [x] 2.1 `dotnet build` — 0 błędów po dodaniu serwisów
 
 ### Phase 3: Blazor UI — Sale i Dostępność
 
