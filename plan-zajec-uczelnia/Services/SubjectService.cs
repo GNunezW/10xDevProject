@@ -29,20 +29,33 @@ public class SubjectService(ApplicationDbContext db) : ISubjectService
             .Include(s => s.SubjectLecturers)
             .FirstOrDefaultAsync(s => s.Id == id);
 
-    public async Task<Subject> CreateAsync(Subject subject, IEnumerable<int> lecturerIds)
+    public async Task<Subject> CreateAsync(Subject subject, IEnumerable<int> lecturerIds, int primaryLecturerId)
     {
+        var ids = lecturerIds.Distinct().ToList();
+        ValidateLecturers(ids, primaryLecturerId);
+
         db.Subjects.Add(subject);
         await db.SaveChangesAsync();
 
-        foreach (var lecturerId in lecturerIds)
-            db.SubjectLecturers.Add(new SubjectLecturer { SubjectId = subject.Id, LecturerId = lecturerId });
+        foreach (var lecturerId in ids)
+        {
+            db.SubjectLecturers.Add(new SubjectLecturer
+            {
+                SubjectId = subject.Id,
+                LecturerId = lecturerId,
+                IsPrimary = lecturerId == primaryLecturerId
+            });
+        }
 
         await db.SaveChangesAsync();
         return subject;
     }
 
-    public async Task UpdateAsync(Subject subject, IEnumerable<int> lecturerIds)
+    public async Task UpdateAsync(Subject subject, IEnumerable<int> lecturerIds, int primaryLecturerId)
     {
+        var ids = lecturerIds.Distinct().ToList();
+        ValidateLecturers(ids, primaryLecturerId);
+
         var existing = await db.Subjects.FindAsync(subject.Id);
         if (existing is null) return;
         existing.Name = subject.Name;
@@ -56,8 +69,15 @@ public class SubjectService(ApplicationDbContext db) : ISubjectService
             .ToListAsync();
         db.SubjectLecturers.RemoveRange(existingLinks);
 
-        foreach (var lecturerId in lecturerIds)
-            db.SubjectLecturers.Add(new SubjectLecturer { SubjectId = subject.Id, LecturerId = lecturerId });
+        foreach (var lecturerId in ids)
+        {
+            db.SubjectLecturers.Add(new SubjectLecturer
+            {
+                SubjectId = subject.Id,
+                LecturerId = lecturerId,
+                IsPrimary = lecturerId == primaryLecturerId
+            });
+        }
 
         await db.SaveChangesAsync();
     }
@@ -70,5 +90,14 @@ public class SubjectService(ApplicationDbContext db) : ISubjectService
             db.Subjects.Remove(subject);
             await db.SaveChangesAsync();
         }
+    }
+
+    private static void ValidateLecturers(List<int> lecturerIds, int primaryLecturerId)
+    {
+        if (lecturerIds.Count == 0)
+            throw new InvalidOperationException("Wybierz co najmniej jednego prowadzącego.");
+
+        if (!lecturerIds.Contains(primaryLecturerId))
+            throw new InvalidOperationException("Główny prowadzący musi być wśród wybranych prowadzących.");
     }
 }

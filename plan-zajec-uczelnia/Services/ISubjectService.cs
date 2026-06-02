@@ -6,7 +6,7 @@ public interface ISubjectService
 {
     Task<List<Subject>> GetAllAsync(int? studyProgramId = null);
     Task<Subject?> GetByIdWithLecturersAsync(int id);
-    Task<Subject> CreateAsync(Subject subject, IEnumerable<int> lecturerIds);
-    Task UpdateAsync(Subject subject, IEnumerable<int> lecturerIds);
+    Task<Subject> CreateAsync(Subject subject, IEnumerable<int> lecturerIds, int primaryLecturerId);
+    Task UpdateAsync(Subject subject, IEnumerable<int> lecturerIds, int primaryLecturerId);
     Task DeleteAsync(int id);
 }

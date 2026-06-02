@@ -101,13 +101,15 @@
             return;
         }
 
-        await ShowDialog(new Subject { InstructionTypeId = _types[0].Id }, [], false);
+        await ShowDialog(new Subject { InstructionTypeId = _types[0].Id }, [], 0, false);
     }
 
     private async Task OpenEditDialog(Subject subject)
     {
         var full = await SubjectService.GetByIdWithLecturersAsync(subject.Id);
         var currentLecturerIds = full?.SubjectLecturers.Select(sl => sl.LecturerId).ToList() ?? [];
+        var primaryId = full?.SubjectLecturers.FirstOrDefault(sl => sl.IsPrimary)?.LecturerId
+            ?? currentLecturerIds.FirstOrDefault();
         await ShowDialog(new Subject
         {
             Id = subject.Id,
@@ -116,10 +118,10 @@
             Semester = subject.Semester,
             NumberOfSessions = subject.NumberOfSessions,
             InstructionTypeId = subject.InstructionTypeId
-        }, currentLecturerIds, true);
+        }, currentLecturerIds, primaryId, true);
     }
 
-    private async Task ShowDialog(Subject model, List<int> selectedLecturerIds, bool isEdit)
+    private async Task ShowDialog(Subject model, List<int> selectedLecturerIds, int primaryLecturerId, bool isEdit)
     {
         var parameters = new DialogParameters<SubjectDialog>
         {
@@ -128,7 +130,8 @@
             { d => d.Programs, _programs },
             { d => d.AllLecturers, _lecturers },
             { d => d.InstructionTypes, _types },
-            { d => d.SelectedLecturerIds, selectedLecturerIds }
+            { d => d.SelectedLecturerIds, selectedLecturerIds },
+            { d => d.PrimaryLecturerId, primaryLecturerId }
         };
         var dialog = await DialogService.ShowAsync<SubjectDialog>(
             isEdit ? "Edytuj przedmiot" : "Dodaj przedmiot", parameters);

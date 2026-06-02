@@ -17,6 +17,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Room> Rooms => Set<Room>();
     public DbSet<InstructionType> InstructionTypes => Set<InstructionType>();
     public DbSet<StudyProgramEnrollment> StudyProgramEnrollments => Set<StudyProgramEnrollment>();
+    public DbSet<ScheduleRun> ScheduleRuns => Set<ScheduleRun>();
+    public DbSet<ScheduledSession> ScheduledSessions => Set<ScheduledSession>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -83,6 +85,46 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasOne(s => s.InstructionType)
             .WithMany()
             .HasForeignKey(s => s.InstructionTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ScheduleRun>()
+            .HasMany(r => r.ScheduledSessions)
+            .WithOne(s => s.ScheduleRun)
+            .HasForeignKey(s => s.ScheduleRunId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ScheduledSession>()
+            .HasIndex(s => new { s.ScheduleRunId, s.SubjectId, s.GroupIndex, s.SessionIndex })
+            .IsUnique();
+
+        modelBuilder.Entity<ScheduledSession>()
+            .HasOne(s => s.StudyProgram)
+            .WithMany()
+            .HasForeignKey(s => s.StudyProgramId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ScheduledSession>()
+            .HasOne(s => s.Subject)
+            .WithMany()
+            .HasForeignKey(s => s.SubjectId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ScheduledSession>()
+            .HasOne(s => s.TimeSlot)
+            .WithMany()
+            .HasForeignKey(s => s.TimeSlotId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ScheduledSession>()
+            .HasOne(s => s.Room)
+            .WithMany()
+            .HasForeignKey(s => s.RoomNumber)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ScheduledSession>()
+            .HasOne(s => s.Lecturer)
+            .WithMany()
+            .HasForeignKey(s => s.LecturerId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

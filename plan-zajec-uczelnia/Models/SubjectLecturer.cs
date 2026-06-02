@@ -7,4 +7,6 @@ public class SubjectLecturer
 
     public int LecturerId { get; set; }
     public Lecturer Lecturer { get; set; } = null!;
+
+    public bool IsPrimary { get; set; }
 }

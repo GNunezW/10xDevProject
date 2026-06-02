@@ -49,6 +49,19 @@
                     <MudSelectItem T="int" Value="l.Id">@l.FirstName @l.LastName</MudSelectItem>
                 }
             </MudSelect>
+            @if (_selectedIds.Count > 0)
+            {
+                <MudSelect T="int" @bind-Value="_primaryLecturerId" Label="Główny prowadzący" Required="true" Class="mb-3">
+                    @foreach (var id in _selectedIds)
+                    {
+                        var lecturer = AllLecturers.FirstOrDefault(l => l.Id == id);
+                        if (lecturer is not null)
+                        {
+                            <MudSelectItem Value="id">@lecturer.FirstName @lecturer.LastName</MudSelectItem>
+                        }
+                    }
+                </MudSelect>
+            }
         </MudForm>
     </DialogContent>
     <DialogActions>
@@ -65,8 +78,10 @@
     [Parameter] public List<Lecturer> AllLecturers { get; set; } = [];
     [Parameter] public List<InstructionType> InstructionTypes { get; set; } = [];
     [Parameter] public List<int> SelectedLecturerIds { get; set; } = [];
+    [Parameter] public int PrimaryLecturerId { get; set; }
 
     private IReadOnlyCollection<int> _selectedIds = [];
+    private int _primaryLecturerId;
     private MudForm _form = default!;
     private int _studentCount;
     private int _estimatedGroups;
@@ -75,6 +90,9 @@
     protected override void OnParametersSet()
     {
         _selectedIds = SelectedLecturerIds.AsReadOnly();
+        _primaryLecturerId = PrimaryLecturerId;
+        if (_primaryLecturerId == 0 && _selectedIds.Count > 0)
+            _primaryLecturerId = _selectedIds.First();
         _ = RefreshGroupEstimateAsync();
     }
 
@@ -119,6 +137,10 @@
     {
         _selectedIds = values;
         SelectedLecturerIds = values.ToList();
+        if (_primaryLecturerId != 0 && !values.Contains(_primaryLecturerId))
+            _primaryLecturerId = values.FirstOrDefault();
+        else if (_primaryLecturerId == 0 && values.Count > 0)
+            _primaryLecturerId = values.First();
     }
 
     private async Task SubmitAsync()
@@ -126,12 +148,24 @@
         await _form.ValidateAsync();
         if (!_form.IsValid) return;
 
+        if (SelectedLecturerIds.Count == 0)
+        {
+            Snackbar.Add("Wybierz co najmniej jednego prowadzącego.", Severity.Warning);
+            return;
+        }
+
+        if (_primaryLecturerId == 0 || !SelectedLecturerIds.Contains(_primaryLecturerId))
+        {
+            Snackbar.Add("Wybierz głównego prowadzącego.", Severity.Warning);
+            return;
+        }
+
         try
         {
             if (IsEdit)
-                await SubjectService.UpdateAsync(Model, SelectedLecturerIds);
+                await SubjectService.UpdateAsync(Model, SelectedLecturerIds, _primaryLecturerId);
             else
-                await SubjectService.CreateAsync(Model, SelectedLecturerIds);
+                await SubjectService.CreateAsync(Model, SelectedLecturerIds, _primaryLecturerId);
 
             MudDialog.Close(DialogResult.Ok(true));
         }
