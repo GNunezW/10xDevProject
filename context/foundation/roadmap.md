@@ -3,7 +3,7 @@ project: "Plan Zajęć Uczelnia"
 version: 1
 status: draft
 created: 2026-05-27
-updated: 2026-05-27
+updated: 2026-06-02
 prd_version: 1
 main_goal: speed
 top_blocker: decisions
@@ -32,7 +32,7 @@ Koordynator planowania na uczelni spędza tygodnie na ręcznym układaniu planu 
 | F-01 | secure-api-routes | (foundation) wszystkie trasy API wymagają ważnego tokenu JWT | — | FR-001 | ready |
 | S-01 | subjects-lecturers-and-grid | definiować kierunki studiów i zarządzać listą przedmiotów przypisanych do kierunku i semestru z prowadzącymi oraz siatką godzin | F-01 | FR-002, FR-003, FR-007, FR-008, US-01 | proposed |
 | S-02 | lecturer-availability | wprowadzać dostępność prowadzących na okres planowania | S-01 | FR-004, US-01 | proposed |
-| S-03 | rooms-model-and-preferences | wprowadzać dostępność sal i preferencje sal do przedmiotów | S-01 | FR-005, FR-006, US-01 | proposed |
+| S-03 | rooms-model-and-preferences | wprowadzać dostępność sal i preferencje sal do przedmiotów | S-01 | FR-005, FR-006, US-01 | done |
 | S-04 | import-scheduling-data | zaimportować dane planowania z pliku | F-01 | FR-009, US-01 | proposed |
 | S-05 | generate-and-view-schedule | uruchomić generowanie planów zajęć (osobno per kierunek) i zobaczyć wyniki z metrykami okienek | S-01, S-02, S-03 | FR-010, FR-011, US-01 | proposed |
 | S-06 | export-schedule | wyeksportować wygenerowany plan | S-05 | FR-012 | proposed |
@@ -112,7 +112,7 @@ Fundamenty poniżej zakładają, że te warstwy są na miejscu i ich NIE reskaff
 - **Unknowns:** —
 - **Risk:** Model danych sal zamknięty (2026-05-27): sala to numer sali (PK) + typ + pojemność. Te same sale dla obu trybów, inna dostępność w slotach. Pojemność vs liczebność grupy nie jest modelowana w PRD — do doprecyzowania przy planowaniu.
 - **UI (Blazor):** lista sal (MudDataGrid) + formularz sali; tabela dostępności sal (sloty jako checkboxy); przypisanie preferencji sali do przedmiotu (MudSelect).
-- **Status:** proposed
+- **Status:** done
 
 ### S-04: Import danych planowania
 
@@ -188,6 +188,4 @@ Fundamenty poniżej zakładają, że te warstwy są na miejscu i ich NIE reskaff
 
 ## Done
 
-(Puste przy pierwszej generacji. `/10x-archive` dopisuje wpis tutaj — i zmienia Status danej pozycji na `done` — gdy zmiana o pasującym Change ID zostanie zarchiwizowana. Format:)
-
-- **<Slice ID>: <Outcome>** — Zarchiwizowano <YYYY-MM-DD> → `context/archive/<YYYY-MM-DD-change-id>/`. Lekcja: <wskaźnik do lessons.md lub `—`>.
+- **S-03: koordynator może wprowadzać dostępność sal i preferencje sal do przedmiotów** — Zarchiwizowano 2026-06-02 → `context/archive/2026-06-01-rooms-model-and-preferences/`. Lekcja: —.
