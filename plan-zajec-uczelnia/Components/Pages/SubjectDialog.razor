@@ -1,4 +1,6 @@
 @inject ISubjectService SubjectService
+@inject IStudyProgramEnrollmentService EnrollmentService
+@inject IInstructionTypeService TypeService
 @inject ISnackbar Snackbar
 
 <MudDialog>
@@ -6,17 +8,38 @@
         <MudForm @ref="_form" Model="Model">
             <MudTextField @bind-Value="Model.Name" Label="Nazwa przedmiotu" Required="true"
                           MaxLength="200" Class="mb-3" />
-            <MudSelect T="int" @bind-Value="Model.StudyProgramId" Label="Kierunek" Required="true" Class="mb-3">
+            <MudSelect T="int" Value="Model.StudyProgramId" Label="Kierunek" Required="true" Class="mb-3"
+                       ValueChanged="OnStudyProgramChanged">
                 @foreach (var p in Programs)
                 {
                     <MudSelectItem Value="p.Id">@p.Name (@p.AcademicYear)</MudSelectItem>
                 }
             </MudSelect>
-            <MudNumericField T="int" @bind-Value="Model.Semester" Label="Semestr" Min="1" Max="7"
-                             Required="true" Class="mb-3" />
+            <MudNumericField T="int" Value="Model.Semester" Label="Semestr" Min="1" Max="7"
+                             Required="true" Class="mb-3" ValueChanged="OnSemesterChanged" />
             <MudNumericField T="int" @bind-Value="Model.NumberOfSessions"
                              Label="Liczba zajęć w semestrze (× 90 min)" Min="1"
                              Required="true" Class="mb-3" />
+            <MudSelect T="int" Value="Model.InstructionTypeId" Label="Typ zajęć" Required="true" Class="mb-3"
+                       ValueChanged="OnInstructionTypeChanged">
+                @foreach (var t in InstructionTypes)
+                {
+                    <MudSelectItem Value="t.Id">@t.Name</MudSelectItem>
+                }
+            </MudSelect>
+            @if (_estimatedGroups > 0)
+            {
+                <MudText Typo="Typo.caption" Class="mb-3">
+                    Szacowana liczba grup: @_estimatedGroups
+                    (@_studentCount studentów, max @_maxPerGroup / grupa)
+                </MudText>
+            }
+            else if (Model.StudyProgramId > 0)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Warning" Class="mb-3">
+                    Brak liczebności dla tego kierunku i semestru — uzupełnij na liście kierunków (ikona grup).
+                </MudText>
+            }
             <MudSelect T="int" MultiSelection="true"
                        SelectedValues="_selectedIds"
                        SelectedValuesChanged="OnSelectedChanged"
@@ -40,14 +63,56 @@
     [Parameter] public bool IsEdit { get; set; }
     [Parameter] public List<StudyProgram> Programs { get; set; } = [];
     [Parameter] public List<Lecturer> AllLecturers { get; set; } = [];
+    [Parameter] public List<InstructionType> InstructionTypes { get; set; } = [];
     [Parameter] public List<int> SelectedLecturerIds { get; set; } = [];
 
     private IReadOnlyCollection<int> _selectedIds = [];
     private MudForm _form = default!;
+    private int _studentCount;
+    private int _estimatedGroups;
+    private int _maxPerGroup;
 
     protected override void OnParametersSet()
     {
         _selectedIds = SelectedLecturerIds.AsReadOnly();
+        _ = RefreshGroupEstimateAsync();
+    }
+
+    private async Task OnStudyProgramChanged(int value)
+    {
+        Model.StudyProgramId = value;
+        await RefreshGroupEstimateAsync();
+    }
+
+    private async Task OnSemesterChanged(int value)
+    {
+        Model.Semester = value;
+        await RefreshGroupEstimateAsync();
+    }
+
+    private async Task OnInstructionTypeChanged(int value)
+    {
+        Model.InstructionTypeId = value;
+        await RefreshGroupEstimateAsync();
+    }
+
+    private async Task RefreshGroupEstimateAsync()
+    {
+        if (Model.StudyProgramId <= 0 || Model.InstructionTypeId <= 0)
+        {
+            _studentCount = 0;
+            _estimatedGroups = 0;
+            StateHasChanged();
+            return;
+        }
+
+        _studentCount = await EnrollmentService.GetStudentCountAsync(Model.StudyProgramId, Model.Semester);
+        var type = InstructionTypes.FirstOrDefault(t => t.Id == Model.InstructionTypeId);
+        _maxPerGroup = type?.MaxStudentsPerGroup ?? 0;
+        _estimatedGroups = type is not null
+            ? InstructionType.EstimateGroupCount(_studentCount, type)
+            : 0;
+        StateHasChanged();
     }
 
     private void OnSelectedChanged(IReadOnlyCollection<int> values)

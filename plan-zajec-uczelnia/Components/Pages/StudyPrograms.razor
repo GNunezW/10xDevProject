@@ -24,6 +24,8 @@
         <PropertyColumn Property="p => p.AcademicYear" Title="Rok akademicki" />
         <TemplateColumn Title="Akcje" CellClass="d-flex justify-end">
             <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Groups" Size="Size.Small" Color="Color.Info"
+                               OnClick="@(() => OpenEnrollmentDialog(context.Item))" />
                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
                                OnClick="@(() => OpenEditDialog(context.Item))" />
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
@@ -59,6 +61,20 @@
         };
         _isEdit = true;
         await ShowDialog();
+    }
+
+    private async Task OpenEnrollmentDialog(StudyProgram program)
+    {
+        var parameters = new DialogParameters<StudyProgramEnrollmentDialog>
+        {
+            { d => d.StudyProgram, program }
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<StudyProgramEnrollmentDialog>(
+            $"Liczebność — {program.Name}", parameters, options);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+            Snackbar.Add("Liczebność zapisana.", Severity.Success);
     }
 
     private async Task ShowDialog()

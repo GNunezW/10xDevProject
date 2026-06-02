@@ -312,27 +312,21 @@ Migracja `AddRoomsAndPreferences` dodaje tabele `Rooms` (PK string), `RoomAvaila
 
 #### Automated
 
-- [x] 2.1 `dotnet build` — 0 błędów po dodaniu serwisów
+- [x] 2.1 `dotnet build` — 0 błędów po dodaniu serwisów — cf29003
 
 ### Phase 3: Blazor UI — Sale i Dostępność
 
 #### Automated
 
-- [ ] 3.1 `dotnet build` — 0 błędów po dodaniu UI sal
+- [x] 3.1 `dotnet build` — 0 błędów po dodaniu UI
 
 #### Manual
 
-- [ ] 3.2 Strona `/sale` — CRUD sal działa
-- [ ] 3.3 Macierz dostępności sal — zapis i odczyt działają
+- [x] 3.2 Strona `/sale` — CRUD sal działa
+- [x] 3.3 Typy zajęć — CRUD w `/ustawienia-planowania`
+- [x] 3.4 Liczebność kierunku (ikona grup) + typ zajęć na przedmiocie + szac. grup
+- [x] 3.5 POST /auth/login nadal działa (regresja F-01)
 
 ### Phase 4: Blazor UI — Preferencje Sal
 
-#### Automated
-
-- [ ] 4.1 `dotnet build` — 0 błędów po dodaniu preferencji
-
-#### Manual
-
-- [ ] 4.2 Preferowana sala w dialogu przedmiotu — zapis i odczyt
-- [ ] 4.3 Usunięcie sali czyści preferencję (SetNull), nie usuwa przedmiotu
-- [ ] 4.4 POST /auth/login nadal działa (regresja F-01)
+> Anulowane — wariant A: tylko typ zajęć, bez preferowanej sali.

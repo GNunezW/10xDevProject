@@ -11,7 +11,7 @@ public class SubjectService(ApplicationDbContext db) : ISubjectService
         var query = db.Subjects
             .AsNoTracking()
             .Include(s => s.StudyProgram)
-            .Include(s => s.PreferredRoom)
+            .Include(s => s.InstructionType)
             .Include(s => s.SubjectLecturers)
                 .ThenInclude(sl => sl.Lecturer)
             .AsQueryable();
@@ -25,13 +25,12 @@ public class SubjectService(ApplicationDbContext db) : ISubjectService
     public Task<Subject?> GetByIdWithLecturersAsync(int id) =>
         db.Subjects
             .AsNoTracking()
-            .Include(s => s.PreferredRoom)
+            .Include(s => s.InstructionType)
             .Include(s => s.SubjectLecturers)
             .FirstOrDefaultAsync(s => s.Id == id);
 
-    public async Task<Subject> CreateAsync(Subject subject, IEnumerable<int> lecturerIds, string? preferredRoomNumber = null)
+    public async Task<Subject> CreateAsync(Subject subject, IEnumerable<int> lecturerIds)
     {
-        subject.PreferredRoomNumber = preferredRoomNumber;
         db.Subjects.Add(subject);
         await db.SaveChangesAsync();
 
@@ -42,7 +41,7 @@ public class SubjectService(ApplicationDbContext db) : ISubjectService
         return subject;
     }
 
-    public async Task UpdateAsync(Subject subject, IEnumerable<int> lecturerIds, string? preferredRoomNumber = null)
+    public async Task UpdateAsync(Subject subject, IEnumerable<int> lecturerIds)
     {
         var existing = await db.Subjects.FindAsync(subject.Id);
         if (existing is null) return;
@@ -50,7 +49,7 @@ public class SubjectService(ApplicationDbContext db) : ISubjectService
         existing.StudyProgramId = subject.StudyProgramId;
         existing.Semester = subject.Semester;
         existing.NumberOfSessions = subject.NumberOfSessions;
-        existing.PreferredRoomNumber = preferredRoomNumber;
+        existing.InstructionTypeId = subject.InstructionTypeId;
 
         var existingLinks = await db.SubjectLecturers
             .Where(sl => sl.SubjectId == subject.Id)

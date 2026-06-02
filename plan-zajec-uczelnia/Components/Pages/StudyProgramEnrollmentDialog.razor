@@ -1,0 +1,66 @@
+@inject IStudyProgramEnrollmentService EnrollmentService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-3">
+            Liczba studentów na kierunku <strong>@StudyProgram.Name</strong> w poszczególnych semestrach.
+            Wartość 0 = brak wpisu.
+        </MudText>
+        <MudSimpleTable Dense="true" Bordered="true">
+            <thead>
+                <tr>
+                    <th>Semestr</th>
+                    <th>Liczba studentów</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var sem = 1; sem <= 7; sem++)
+                {
+                    var semester = sem;
+                    <tr>
+                        <td>@semester</td>
+                        <td>
+                            <MudNumericField T="int" Value="@GetCount(semester)"
+                                             ValueChanged="@(v => SetCount(semester, v))"
+                                             Min="0" Margin="Margin.Dense" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Anuluj</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveAsync">Zapisz</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public StudyProgram StudyProgram { get; set; } = null!;
+
+    private readonly Dictionary<int, int> _counts = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var existing = await EnrollmentService.GetByProgramAsync(StudyProgram.Id);
+        for (var sem = 1; sem <= 7; sem++)
+            _counts[sem] = existing.GetValueOrDefault(sem, 0);
+    }
+
+    private int GetCount(int semester) => _counts.GetValueOrDefault(semester, 0);
+
+    private void SetCount(int semester, int value) => _counts[semester] = value;
+
+    private async Task SaveAsync()
+    {
+        var entries = _counts
+            .Where(kv => kv.Value > 0)
+            .Select(kv => (kv.Key, kv.Value));
+        await EnrollmentService.SaveAsync(StudyProgram.Id, entries);
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

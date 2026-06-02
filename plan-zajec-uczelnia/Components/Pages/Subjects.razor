@@ -3,6 +3,8 @@
 @inject ISubjectService SubjectService
 @inject IStudyProgramService ProgramService
 @inject ILecturerService LecturerService
+@inject IStudyProgramEnrollmentService EnrollmentService
+@inject IInstructionTypeService TypeService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
@@ -31,6 +33,12 @@
             <CellTemplate>@context.Item.StudyProgram?.Name</CellTemplate>
         </TemplateColumn>
         <PropertyColumn Property="s => s.Semester" Title="Semestr" />
+        <TemplateColumn Title="Typ zajęć">
+            <CellTemplate>@context.Item.InstructionType?.Name</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Szac. grup">
+            <CellTemplate>@EstimateGroups(context.Item)</CellTemplate>
+        </TemplateColumn>
         <TemplateColumn Title="Liczba zajęć">
             <CellTemplate>@context.Item.NumberOfSessions × 90 min</CellTemplate>
         </TemplateColumn>
@@ -55,13 +63,28 @@
     private List<Subject> _subjects = [];
     private List<StudyProgram> _programs = [];
     private List<Lecturer> _lecturers = [];
+    private List<InstructionType> _types = [];
+    private Dictionary<(int ProgramId, int Semester), int> _enrollment = [];
     private int? _filterProgramId;
 
     protected override async Task OnInitializedAsync()
     {
+        _types = await TypeService.GetAllAsync();
         _programs = await ProgramService.GetAllAsync();
         _lecturers = await LecturerService.GetAllAsync();
+        await LoadEnrollmentsAsync();
         _subjects = await SubjectService.GetAllAsync();
+    }
+
+    private async Task LoadEnrollmentsAsync()
+    {
+        _enrollment = [];
+        foreach (var p in _programs)
+        {
+            var counts = await EnrollmentService.GetByProgramAsync(p.Id);
+            foreach (var (sem, count) in counts)
+                _enrollment[(p.Id, sem)] = count;
+        }
     }
 
     private async Task OnFilterChanged(int? value)
@@ -72,7 +95,13 @@
 
     private async Task OpenAddDialog()
     {
-        await ShowDialog(new Subject(), [], false);
+        if (_types.Count == 0)
+        {
+            Snackbar.Add("Najpierw dodaj typ zajęć w ustawieniach planowania.", Severity.Warning);
+            return;
+        }
+
+        await ShowDialog(new Subject { InstructionTypeId = _types[0].Id }, [], false);
     }
 
     private async Task OpenEditDialog(Subject subject)
@@ -85,7 +114,8 @@
             Name = subject.Name,
             StudyProgramId = subject.StudyProgramId,
             Semester = subject.Semester,
-            NumberOfSessions = subject.NumberOfSessions
+            NumberOfSessions = subject.NumberOfSessions,
+            InstructionTypeId = subject.InstructionTypeId
         }, currentLecturerIds, true);
     }
 
@@ -97,13 +127,17 @@
             { d => d.IsEdit, isEdit },
             { d => d.Programs, _programs },
             { d => d.AllLecturers, _lecturers },
+            { d => d.InstructionTypes, _types },
             { d => d.SelectedLecturerIds, selectedLecturerIds }
         };
         var dialog = await DialogService.ShowAsync<SubjectDialog>(
             isEdit ? "Edytuj przedmiot" : "Dodaj przedmiot", parameters);
         var result = await dialog.Result;
         if (!result!.Canceled)
+        {
+            await LoadEnrollmentsAsync();
             _subjects = await SubjectService.GetAllAsync(_filterProgramId);
+        }
     }
 
     private async Task DeleteAsync(Subject subject)
@@ -121,5 +155,13 @@
             _subjects = await SubjectService.GetAllAsync(_filterProgramId);
             Snackbar.Add("Przedmiot usunięty.", Severity.Success);
         }
+    }
+
+    private string EstimateGroups(Subject subject)
+    {
+        var count = _enrollment.GetValueOrDefault((subject.StudyProgramId, subject.Semester), 0);
+        if (count <= 0 || subject.InstructionType is null) return "—";
+        var groups = InstructionType.EstimateGroupCount(count, subject.InstructionType);
+        return groups > 0 ? groups.ToString() : "—";
     }
 }

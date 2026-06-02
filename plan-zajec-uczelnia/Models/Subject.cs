@@ -20,9 +20,8 @@ public class Subject
     [Range(1, int.MaxValue)]
     public int NumberOfSessions { get; set; }
 
-    [MaxLength(20)]
-    public string? PreferredRoomNumber { get; set; }
-    public Room? PreferredRoom { get; set; }
+    public int InstructionTypeId { get; set; }
+    public InstructionType InstructionType { get; set; } = null!;
 
     public ICollection<SubjectLecturer> SubjectLecturers { get; set; } = [];
 }

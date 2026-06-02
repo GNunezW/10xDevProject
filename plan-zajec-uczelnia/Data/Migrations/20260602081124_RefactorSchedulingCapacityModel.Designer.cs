@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using plan_zajec_uczelnia.Data;
@@ -11,9 +12,11 @@ using plan_zajec_uczelnia.Data;
 namespace plan_zajec_uczelnia.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260602081124_RefactorSchedulingCapacityModel")]
+    partial class RefactorSchedulingCapacityModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -218,50 +221,6 @@ namespace plan_zajec_uczelnia.Data.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("plan_zajec_uczelnia.Models.InstructionType", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("MaxStudentsPerGroup")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("InstructionTypes");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            MaxStudentsPerGroup = 120,
-                            Name = "Wykład"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            MaxStudentsPerGroup = 30,
-                            Name = "Ćwiczenia"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            MaxStudentsPerGroup = 24,
-                            Name = "Laboratorium"
-                        });
-                });
-
             modelBuilder.Entity("plan_zajec_uczelnia.Models.Lecturer", b =>
                 {
                     b.Property<int>("Id")
@@ -317,14 +276,43 @@ namespace plan_zajec_uczelnia.Data.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<int>("InstructionTypeId")
+                    b.Property<int>("Type")
                         .HasColumnType("integer");
 
                     b.HasKey("RoomNumber");
 
-                    b.HasIndex("InstructionTypeId");
-
                     b.ToTable("Rooms");
+                });
+
+            modelBuilder.Entity("plan_zajec_uczelnia.Models.SchedulingSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("MaxStudentsExercise")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxStudentsLaboratory")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxStudentsLecture")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SchedulingSettings");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            MaxStudentsExercise = 30,
+                            MaxStudentsLaboratory = 24,
+                            MaxStudentsLecture = 120
+                        });
                 });
 
             modelBuilder.Entity("plan_zajec_uczelnia.Models.SemesterPeriod", b =>
@@ -407,7 +395,7 @@ namespace plan_zajec_uczelnia.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("InstructionTypeId")
+                    b.Property<int>("LessonType")
                         .HasColumnType("integer");
 
                     b.Property<string>("Name")
@@ -425,8 +413,6 @@ namespace plan_zajec_uczelnia.Data.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("InstructionTypeId");
 
                     b.HasIndex("StudyProgramId");
 
@@ -534,17 +520,6 @@ namespace plan_zajec_uczelnia.Data.Migrations
                     b.Navigation("TimeSlot");
                 });
 
-            modelBuilder.Entity("plan_zajec_uczelnia.Models.Room", b =>
-                {
-                    b.HasOne("plan_zajec_uczelnia.Models.InstructionType", "InstructionType")
-                        .WithMany()
-                        .HasForeignKey("InstructionTypeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("InstructionType");
-                });
-
             modelBuilder.Entity("plan_zajec_uczelnia.Models.StudyProgramEnrollment", b =>
                 {
                     b.HasOne("plan_zajec_uczelnia.Models.StudyProgram", "StudyProgram")
@@ -558,19 +533,11 @@ namespace plan_zajec_uczelnia.Data.Migrations
 
             modelBuilder.Entity("plan_zajec_uczelnia.Models.Subject", b =>
                 {
-                    b.HasOne("plan_zajec_uczelnia.Models.InstructionType", "InstructionType")
-                        .WithMany()
-                        .HasForeignKey("InstructionTypeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("plan_zajec_uczelnia.Models.StudyProgram", "StudyProgram")
                         .WithMany("Subjects")
                         .HasForeignKey("StudyProgramId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("InstructionType");
 
                     b.Navigation("StudyProgram");
                 });

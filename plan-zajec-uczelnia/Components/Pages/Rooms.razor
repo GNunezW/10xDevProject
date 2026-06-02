@@ -1,0 +1,109 @@
+@page "/sale"
+@rendermode InteractiveServer
+@inject IRoomService RoomService
+@inject IInstructionTypeService TypeService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Sale</PageTitle>
+
+<MudText Typo="Typo.h5" GutterBottom="true">Sale</MudText>
+
+<MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+    Sale są domyślnie dostępne. Pojemność wynika z
+    <MudLink Href="/ustawienia-planowania">typu sali</MudLink>.
+</MudAlert>
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+           OnClick="OpenAddDialog" Class="mb-4">
+    Dodaj salę
+</MudButton>
+
+<MudDataGrid T="Room" Items="_rooms" Hover="true" Striped="true" Dense="true">
+    <Columns>
+        <PropertyColumn Property="r => r.RoomNumber" Title="Numer" />
+        <TemplateColumn Title="Typ">
+            <CellTemplate>@context.Item.InstructionType?.Name</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Miejsca (z typu)">
+            <CellTemplate>@context.Item.InstructionType?.MaxStudentsPerGroup</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Akcje" CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                               OnClick="@(() => OpenEditDialog(context.Item))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                               OnClick="@(() => DeleteAsync(context.Item))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private List<Room> _rooms = [];
+    private List<InstructionType> _types = [];
+    private Room _model = new();
+    private bool _isEdit;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _types = await TypeService.GetAllAsync();
+        _rooms = await RoomService.GetAllAsync();
+    }
+
+    private async Task OpenAddDialog()
+    {
+        if (_types.Count == 0)
+        {
+            Snackbar.Add("Najpierw dodaj typ zajęć w ustawieniach planowania.", Severity.Warning);
+            return;
+        }
+
+        _model = new Room { InstructionTypeId = _types[0].Id };
+        _isEdit = false;
+        await ShowDialog();
+    }
+
+    private async Task OpenEditDialog(Room room)
+    {
+        _model = new Room
+        {
+            RoomNumber = room.RoomNumber,
+            InstructionTypeId = room.InstructionTypeId
+        };
+        _isEdit = true;
+        await ShowDialog();
+    }
+
+    private async Task ShowDialog()
+    {
+        var parameters = new DialogParameters<RoomDialog>
+        {
+            { d => d.Model, _model },
+            { d => d.IsEdit, _isEdit },
+            { d => d.InstructionTypes, _types }
+        };
+        var dialog = await DialogService.ShowAsync<RoomDialog>(
+            _isEdit ? "Edytuj salę" : "Dodaj salę", parameters);
+        var result = await dialog.Result;
+        if (!result!.Canceled)
+            _rooms = await RoomService.GetAllAsync();
+    }
+
+    private async Task DeleteAsync(Room room)
+    {
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { d => d.Message, $"Czy na pewno chcesz usunąć salę \"{room.RoomNumber}\"?" },
+            { d => d.YesText, "Usuń" }
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Potwierdź usunięcie", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await RoomService.DeleteAsync(room.RoomNumber);
+            _rooms = await RoomService.GetAllAsync();
+            Snackbar.Add("Sala usunięta.", Severity.Success);
+        }
+    }
+}

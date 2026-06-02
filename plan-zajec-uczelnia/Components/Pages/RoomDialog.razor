@@ -1,0 +1,59 @@
+@inject IRoomService RoomService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" Model="Model">
+            <MudTextField @bind-Value="Model.RoomNumber" Label="Numer sali" Required="true"
+                          MaxLength="20" Disabled="IsEdit" Class="mb-3" />
+            <MudSelect T="int" Value="Model.InstructionTypeId" Label="Typ sali" Required="true"
+                       ValueChanged="OnTypeChanged">
+                @foreach (var t in InstructionTypes)
+                {
+                    <MudSelectItem Value="t.Id">@t.Name (@t.MaxStudentsPerGroup miejsc)</MudSelectItem>
+                }
+            </MudSelect>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Anuluj</MudButton>
+        <MudButton Color="Color.Primary" OnClick="SubmitAsync">Zapisz</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Room Model { get; set; } = new();
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public List<InstructionType> InstructionTypes { get; set; } = [];
+
+    private MudForm _form = default!;
+
+    private void OnTypeChanged(int id) => Model.InstructionTypeId = id;
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        try
+        {
+            if (IsEdit)
+                await RoomService.UpdateAsync(Model);
+            else
+                await RoomService.CreateAsync(Model);
+
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            Snackbar.Add("Sala o tym numerze już istnieje.", Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Błąd: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

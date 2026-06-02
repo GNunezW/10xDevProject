@@ -1,0 +1,99 @@
+@page "/ustawienia-planowania"
+@rendermode InteractiveServer
+@inject IInstructionTypeService TypeService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Ustawienia planowania</PageTitle>
+
+<MudText Typo="Typo.h5" GutterBottom="true">Typy zajęć i sal</MudText>
+
+<MudText Typo="Typo.body2" Class="mb-4">
+    Każdy typ ma limit osób w jednej grupie — ta sama wartość określa pojemność sal tego typu.
+    Sale i przedmioty wybierają typ z tej listy.
+</MudText>
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+           OnClick="OpenAddDialog" Class="mb-4">
+    Dodaj typ
+</MudButton>
+
+<MudDataGrid T="InstructionType" Items="_types" Hover="true" Striped="true" Dense="true">
+    <Columns>
+        <PropertyColumn Property="t => t.Name" Title="Nazwa" />
+        <PropertyColumn Property="t => t.MaxStudentsPerGroup" Title="Max osób w grupie" />
+        <TemplateColumn Title="Akcje" CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                               OnClick="@(() => OpenEditDialog(context.Item))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                               OnClick="@(() => DeleteAsync(context.Item))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private List<InstructionType> _types = [];
+    private InstructionType _model = new();
+    private bool _isEdit;
+
+    protected override async Task OnInitializedAsync() =>
+        _types = await TypeService.GetAllAsync();
+
+    private async Task OpenAddDialog()
+    {
+        _model = new InstructionType { MaxStudentsPerGroup = 30 };
+        _isEdit = false;
+        await ShowDialog();
+    }
+
+    private async Task OpenEditDialog(InstructionType type)
+    {
+        _model = new InstructionType
+        {
+            Id = type.Id,
+            Name = type.Name,
+            MaxStudentsPerGroup = type.MaxStudentsPerGroup
+        };
+        _isEdit = true;
+        await ShowDialog();
+    }
+
+    private async Task ShowDialog()
+    {
+        var parameters = new DialogParameters<InstructionTypeDialog>
+        {
+            { d => d.Model, _model },
+            { d => d.IsEdit, _isEdit }
+        };
+        var dialog = await DialogService.ShowAsync<InstructionTypeDialog>(
+            _isEdit ? "Edytuj typ zajęć" : "Dodaj typ zajęć", parameters);
+        var result = await dialog.Result;
+        if (!result!.Canceled)
+            _types = await TypeService.GetAllAsync();
+    }
+
+    private async Task DeleteAsync(InstructionType type)
+    {
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { d => d.Message, $"Czy na pewno chcesz usunąć typ \"{type.Name}\"?" },
+            { d => d.YesText, "Usuń" }
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Potwierdź usunięcie", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            var (success, error) = await TypeService.DeleteAsync(type.Id);
+            if (!success)
+            {
+                Snackbar.Add(error ?? "Nie można usunąć typu.", Severity.Warning);
+                return;
+            }
+
+            _types = await TypeService.GetAllAsync();
+            Snackbar.Add("Typ usunięty.", Severity.Success);
+        }
+    }
+}

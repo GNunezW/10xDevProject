@@ -7,10 +7,6 @@ public class Room
     [Key, MaxLength(20)]
     public string RoomNumber { get; set; } = string.Empty;
 
-    public RoomType Type { get; set; }
-
-    [Range(1, int.MaxValue)]
-    public int Capacity { get; set; }
-
-    public ICollection<RoomAvailability> Availabilities { get; set; } = [];
+    public int InstructionTypeId { get; set; }
+    public InstructionType InstructionType { get; set; } = null!;
 }

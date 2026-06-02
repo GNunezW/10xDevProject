@@ -15,7 +15,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<SemesterPeriod> SemesterPeriods => Set<SemesterPeriod>();
     public DbSet<LecturerAvailability> LecturerAvailabilities => Set<LecturerAvailability>();
     public DbSet<Room> Rooms => Set<Room>();
-    public DbSet<RoomAvailability> RoomAvailabilities => Set<RoomAvailability>();
+    public DbSet<InstructionType> InstructionTypes => Set<InstructionType>();
+    public DbSet<StudyProgramEnrollment> StudyProgramEnrollments => Set<StudyProgramEnrollment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -38,6 +39,16 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasIndex(sp => new { sp.AcademicYear, sp.SemesterOrdinal })
             .IsUnique();
 
+        modelBuilder.Entity<InstructionType>()
+            .HasIndex(t => t.Name)
+            .IsUnique();
+
+        modelBuilder.Entity<InstructionType>()
+            .HasData(
+                new InstructionType { Id = 1, Name = "Wykład", MaxStudentsPerGroup = 120 },
+                new InstructionType { Id = 2, Name = "Ćwiczenia", MaxStudentsPerGroup = 30 },
+                new InstructionType { Id = 3, Name = "Laboratorium", MaxStudentsPerGroup = 24 });
+
         modelBuilder.Entity<LecturerAvailability>()
             .HasKey(la => new { la.LecturerId, la.DayOfWeek, la.TimeSlotId });
 
@@ -53,25 +64,25 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasForeignKey(la => la.TimeSlotId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<RoomAvailability>()
-            .HasKey(ra => new { ra.RoomNumber, ra.DayOfWeek, ra.TimeSlotId });
+        modelBuilder.Entity<StudyProgramEnrollment>()
+            .HasKey(e => new { e.StudyProgramId, e.Semester });
 
-        modelBuilder.Entity<RoomAvailability>()
-            .HasOne(ra => ra.Room)
-            .WithMany(r => r.Availabilities)
-            .HasForeignKey(ra => ra.RoomNumber)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder.Entity<RoomAvailability>()
-            .HasOne(ra => ra.TimeSlot)
+        modelBuilder.Entity<StudyProgramEnrollment>()
+            .HasOne(e => e.StudyProgram)
             .WithMany()
-            .HasForeignKey(ra => ra.TimeSlotId)
+            .HasForeignKey(e => e.StudyProgramId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Room>()
+            .HasOne(r => r.InstructionType)
+            .WithMany()
+            .HasForeignKey(r => r.InstructionTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Subject>()
-            .HasOne(s => s.PreferredRoom)
+            .HasOne(s => s.InstructionType)
             .WithMany()
-            .HasForeignKey(s => s.PreferredRoomNumber)
-            .OnDelete(DeleteBehavior.SetNull);
+            .HasForeignKey(s => s.InstructionTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

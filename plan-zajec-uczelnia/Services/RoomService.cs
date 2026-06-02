@@ -7,7 +7,10 @@ namespace plan_zajec_uczelnia.Services;
 public class RoomService(ApplicationDbContext db) : IRoomService
 {
     public Task<List<Room>> GetAllAsync() =>
-        db.Rooms.AsNoTracking().OrderBy(r => r.RoomNumber).ToListAsync();
+        db.Rooms.AsNoTracking()
+            .Include(r => r.InstructionType)
+            .OrderBy(r => r.RoomNumber)
+            .ToListAsync();
 
     public Task<Room?> GetByRoomNumberAsync(string roomNumber) =>
         db.Rooms.AsNoTracking().FirstOrDefaultAsync(r => r.RoomNumber == roomNumber);
@@ -23,8 +26,7 @@ public class RoomService(ApplicationDbContext db) : IRoomService
     {
         var existing = await db.Rooms.FindAsync(room.RoomNumber);
         if (existing is null) return;
-        existing.Type = room.Type;
-        existing.Capacity = room.Capacity;
+        existing.InstructionTypeId = room.InstructionTypeId;
         await db.SaveChangesAsync();
     }
 
