@@ -14,6 +14,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<TimeSlot> TimeSlots => Set<TimeSlot>();
     public DbSet<SemesterPeriod> SemesterPeriods => Set<SemesterPeriod>();
     public DbSet<LecturerAvailability> LecturerAvailabilities => Set<LecturerAvailability>();
+    public DbSet<Room> Rooms => Set<Room>();
+    public DbSet<RoomAvailability> RoomAvailabilities => Set<RoomAvailability>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -50,5 +52,26 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany()
             .HasForeignKey(la => la.TimeSlotId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<RoomAvailability>()
+            .HasKey(ra => new { ra.RoomNumber, ra.DayOfWeek, ra.TimeSlotId });
+
+        modelBuilder.Entity<RoomAvailability>()
+            .HasOne(ra => ra.Room)
+            .WithMany(r => r.Availabilities)
+            .HasForeignKey(ra => ra.RoomNumber)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<RoomAvailability>()
+            .HasOne(ra => ra.TimeSlot)
+            .WithMany()
+            .HasForeignKey(ra => ra.TimeSlotId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Subject>()
+            .HasOne(s => s.PreferredRoom)
+            .WithMany()
+            .HasForeignKey(s => s.PreferredRoomNumber)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
