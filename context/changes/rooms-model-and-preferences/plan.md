@@ -318,14 +318,14 @@ Migracja `AddRoomsAndPreferences` dodaje tabele `Rooms` (PK string), `RoomAvaila
 
 #### Automated
 
-- [x] 3.1 `dotnet build` — 0 błędów po dodaniu UI
+- [x] 3.1 `dotnet build` — 0 błędów po dodaniu UI — 697f82e
 
 #### Manual
 
-- [x] 3.2 Strona `/sale` — CRUD sal działa
-- [x] 3.3 Typy zajęć — CRUD w `/ustawienia-planowania`
-- [x] 3.4 Liczebność kierunku (ikona grup) + typ zajęć na przedmiocie + szac. grup
-- [x] 3.5 POST /auth/login nadal działa (regresja F-01)
+- [x] 3.2 Strona `/sale` — CRUD sal działa — 697f82e
+- [x] 3.3 Typy zajęć — CRUD w `/ustawienia-planowania` — 697f82e
+- [x] 3.4 Liczebność kierunku (ikona grup) + typ zajęć na przedmiocie + szac. grup — 697f82e
+- [x] 3.5 POST /auth/login nadal działa (regresja F-01) — 697f82e
 
 ### Phase 4: Blazor UI — Preferencje Sal
 
