@@ -11,6 +11,11 @@
                 <MudSelectItem Value="StudyMode.FullTime">Stacjonarny</MudSelectItem>
                 <MudSelectItem Value="StudyMode.PartTime">Niestacjonarny</MudSelectItem>
             </MudSelect>
+            <MudSelect T="StudyDegree" @bind-Value="Model.StudyDegree" Label="Stopień studiów" Class="mb-3">
+                <MudSelectItem Value="StudyDegree.FirstDegreeLicentiate">@StudyDegreeRules.Label(StudyDegree.FirstDegreeLicentiate)</MudSelectItem>
+                <MudSelectItem Value="StudyDegree.FirstDegreeEngineer">@StudyDegreeRules.Label(StudyDegree.FirstDegreeEngineer)</MudSelectItem>
+                <MudSelectItem Value="StudyDegree.SecondDegreeMaster">@StudyDegreeRules.Label(StudyDegree.SecondDegreeMaster)</MudSelectItem>
+            </MudSelect>
             @if (_academicYears.Any())
             {
                 <MudSelect T="string" @bind-Value="Model.AcademicYear" Label="Rok akademicki" Required="true">

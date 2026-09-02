@@ -35,7 +35,7 @@ Na `/generuj-plan` koordynator uruchamia generowanie (spinner do 60 s), widzi st
 
 **In scope:** Pakiet OR-Tools; encje wyniku; CP-SAT (kolizje, availability, typ sali, dni trybu, brak sąsiednich slotów = 15 min); obiektywna minimalizacja okienek per kierunek; walidacja wejścia; UI `/generuj-plan` + podgląd; `IsPrimary` w UI przedmiotu.
 
-**Out of scope:** RoomAvailability (FR-005 odroczone); preferencje sal (FR-006); eksport (S-06); import (S-04); tło/Hangfire; optymalizacja obciążenia prowadzących; filtr semestru/ROK w triggerze (MVP: wszystkie przedmioty w DB); osobne siatki weekday/weekend.
+**Out of scope:** RoomAvailability i preferencje sal (FR-006) — poza MVP, PRD v6; eksport (S-06); import (S-04, PRD v7 poza MVP); tło/Hangfire; optymalizacja obciążenia prowadzących; filtr semestru/ROK w triggerze (MVP: wszystkie przedmioty w DB); osobne siatki weekday/weekend.
 
 ## Architecture / Approach
 
@@ -66,7 +66,7 @@ Solver przypisuje każdą sesję do `(DayOfWeek, TimeSlotId, RoomNumber)`; prowa
 ## Open Risks & Assumptions
 
 - MVP planuje **wszystkie** wiersze `Subjects` — koordynator utrzymuje tylko aktualny semestr w bazie lub akceptuje mieszankę semestrów.
-- PRD FR-005/FR-006 nie są spełnione w danych — świadome odchylenie (wariant A).
+- PRD FR-005 = katalog sal (numer + typ); FR-006 poza MVP — zgodne z S-03 wariant A (PRD v6).
 - Jakość okienek zależy od gęstości siatki i limitu 60 s — brak gwarancji optimum (zgodnie z PRD).
 - Pierwszy przedmiot bez oznaczonego głównego prowadzącego blokuje walidację — wymaga jednorazowego uzupełnienia danych.
 

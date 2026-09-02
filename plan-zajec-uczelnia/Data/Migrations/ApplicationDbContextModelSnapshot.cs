@@ -311,6 +311,34 @@ namespace plan_zajec_uczelnia.Data.Migrations
                     b.ToTable("LecturerAvailabilities");
                 });
 
+            modelBuilder.Entity("plan_zajec_uczelnia.Models.NonWorkingDay", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AcademicYear")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYear", "Date")
+                        .IsUnique();
+
+                    b.ToTable("NonWorkingDays");
+                });
+
             modelBuilder.Entity("plan_zajec_uczelnia.Models.Room", b =>
                 {
                     b.Property<string>("RoomNumber")
@@ -339,8 +367,8 @@ namespace plan_zajec_uczelnia.Data.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ErrorMessage")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
 
                     b.Property<int>("SolverTimeLimitSeconds")
                         .HasColumnType("integer");
@@ -457,6 +485,9 @@ namespace plan_zajec_uczelnia.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<int>("StudyDegree")
+                        .HasColumnType("integer");
 
                     b.Property<int>("StudyMode")
                         .HasColumnType("integer");

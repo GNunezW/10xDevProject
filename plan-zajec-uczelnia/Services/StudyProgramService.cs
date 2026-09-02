@@ -25,6 +25,7 @@ public class StudyProgramService(ApplicationDbContext db) : IStudyProgramService
         if (existing is null) return;
         existing.Name = program.Name;
         existing.StudyMode = program.StudyMode;
+        existing.StudyDegree = program.StudyDegree;
         existing.AcademicYear = program.AcademicYear;
         await db.SaveChangesAsync();
     }

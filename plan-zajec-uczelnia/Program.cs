@@ -1,12 +1,16 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MudBlazor.Services;
 using plan_zajec_uczelnia.Components;
 using plan_zajec_uczelnia.Data;
+using plan_zajec_uczelnia.Data.Seeding;
 using plan_zajec_uczelnia.Endpoints;
+using plan_zajec_uczelnia.Models;
 using plan_zajec_uczelnia.Services;
 using plan_zajec_uczelnia.Services.Scheduling;
 
@@ -28,15 +32,22 @@ builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/login";
+    options.Cookie.HttpOnly = true;
+});
+
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Jwt:Key is not configured in user-secrets.");
 
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
 })
-.AddJwtBearer(options =>
+.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -52,10 +63,16 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization(options =>
 {
-    options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+    // Blazor UI: cookie Identity. API: osobno JwtBearer na endpointach.
+    options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder(
+            IdentityConstants.ApplicationScheme)
         .RequireAuthenticatedUser()
         .Build();
 });
+
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -66,17 +83,23 @@ builder.Services.AddScoped<ILecturerService, LecturerService>();
 builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<ITimeSlotService, TimeSlotService>();
 builder.Services.AddScoped<ISemesterPeriodService, SemesterPeriodService>();
+builder.Services.AddScoped<INonWorkingDayService, NonWorkingDayService>();
 builder.Services.AddScoped<ILecturerAvailabilityService, LecturerAvailabilityService>();
 builder.Services.AddScoped<IRoomService, RoomService>();
 builder.Services.AddScoped<IInstructionTypeService, InstructionTypeService>();
 builder.Services.AddScoped<IStudyProgramEnrollmentService, StudyProgramEnrollmentService>();
+builder.Services.AddScoped<ISubjectStaffingService, SubjectStaffingService>();
 builder.Services.AddScoped<IScheduleValidationService, ScheduleValidationService>();
 builder.Services.AddScoped<IScheduleGenerationService, ScheduleGenerationService>();
 builder.Services.AddScoped<IScheduleViewService, ScheduleViewService>();
+builder.Services.AddScoped<IScheduleExportService, ScheduleExportService>();
 
 var app = builder.Build();
 
 await SeedCoordinatorAsync(app);
+await ChemicalTechnologySeed.SeedAsync(app.Services);
+await ComputerScienceSeed.SeedAsync(app.Services);
+await CleanupStaleScheduleRunsAsync(app);
 
 if (app.Environment.IsDevelopment())
 {
@@ -90,7 +113,9 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapAuthEndpoints();
+app.MapAccountEndpoints();
 app.MapScheduleEndpoints();
+app.MapScheduleExportEndpoints();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
@@ -130,11 +155,43 @@ static async Task SeedCoordinatorAsync(WebApplication app)
     if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
         return;
 
-    if (await userManager.FindByEmailAsync(email) is null)
+    var user = await userManager.FindByEmailAsync(email);
+    if (user is null)
     {
-        var user = new AppUser { UserName = email, Email = email, EmailConfirmed = true };
+        user = new AppUser { UserName = email, Email = email, EmailConfirmed = true };
         await userManager.CreateAsync(user, password);
+        return;
     }
+
+    if (!app.Environment.IsDevelopment())
+        return;
+
+    await userManager.ResetAccessFailedCountAsync(user);
+    var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
+    await userManager.ResetPasswordAsync(user, resetToken, password);
+}
+
+static async Task CleanupStaleScheduleRunsAsync(WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var cutoff = DateTime.UtcNow.AddMinutes(-2);
+
+    var staleRuns = await db.ScheduleRuns
+        .Where(r => r.Status == ScheduleRunStatus.Running && r.StartedAt < cutoff)
+        .ToListAsync();
+
+    if (staleRuns.Count == 0)
+        return;
+
+    foreach (var run in staleRuns)
+    {
+        run.Status = ScheduleRunStatus.Failed;
+        run.CompletedAt = DateTime.UtcNow;
+        run.ErrorMessage = "Przerwano — poprzednie uruchomienie nie zakończyło się (np. restart aplikacji).";
+    }
+
+    await db.SaveChangesAsync();
 }
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)

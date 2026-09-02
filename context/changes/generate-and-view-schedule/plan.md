@@ -6,6 +6,16 @@ Piąty slice — gwiazda przewodnia roadmapy. Koordynator uruchamia generowanie 
 
 Decyzje z planowania: wariant A sal (bez `RoomAvailability`), `ScheduleRun` + `ScheduledSession`, synchroniczny UX ze spinnerem (60 s), przy INFEASIBLE — run `Failed`, główny prowadzący przez `SubjectLecturer.IsPrimary`.
 
+## Addendum: model tygodniowy (2026-08-26)
+
+Solver układa **plan tygodniowy powtarzalny** (szablon na każdy tydzień semestru), nie pełny rozkład wszystkich sesji semestralnych w jednym tygodniu. Liczba zadań solvera per przedmiot/grupa: `ScheduleWeekCalculator.ResolveWeeklySlotCount(NumberOfSessions, tygodnieSemestru)` zamiast `1..NumberOfSessions`. UI podglądu (`ViewSchedule.razor`) i metryki okienek odnoszą się do tego tygodniowego szablonu.
+
+**Zastępcy prowadzący:** Gdy główny prowadzący nie ma dostępności, solver może przypisać innego prowadzącego z listy przedmiotu (kara w funkcji celu za wybór nie-primary). Walidacja blokuje generowanie tylko gdy **żaden** przypisany prowadzący nie ma dostępności.
+
+**Dane demo i rozszerzenia poza oryginalnym S-05:** `StudyDegree` na kierunku (limit semestrów), seedy `ComputerScienceSeed` / `ChemicalTechnologySeed`, `ScheduleInfeasibilityDiagnostics`, filtr semestru w `ViewSchedule.razor`, rozszerzenie `ErrorMessage` do 8000 znaków — wspierają testy manualne i demo koordynatora; udokumentowane tutaj zamiast osobnego change-id.
+
+**API schedulingu (bonus):** `GET /api/scheduling/validate`, `POST /api/scheduling/generate` w `ScheduleEndpoints.cs` — chronione JWT (FallbackPolicy); używane do testów API-first i regresji F-01.
+
 ## Current State Analysis
 
 - Dane wejściowe z S-01–S-03: `StudyProgram`, `Subject`, `SubjectLecturer`, `LecturerAvailability`, `TimeSlot`, `Room`, `InstructionType`, `StudyProgramEnrollment` — `plan-zajec-uczelnia/Data/ApplicationDbContext.cs`.
@@ -31,10 +41,10 @@ Decyzje z planowania: wariant A sal (bez `RoomAvailability`), `ScheduleRun` + `S
 
 ## What We're NOT Doing
 
-- Przywracanie `RoomAvailability` / preferencji sal (osobny change jeśli PRD ma być domknięty).
-- Eksport planu (S-06), import (S-04).
+- Przywracanie `RoomAvailability` / preferencji sal — poza MVP (PRD v6 / S-03 wariant A).
+- Eksport planu (S-06). Import (S-04) — poza MVP (PRD v7).
 - Generowanie w tle / Hangfire / polling.
-- Wybór prowadzącego przez solver (tylko `IsPrimary`).
+- ~~Wybór prowadzącego przez solver (tylko `IsPrimary`)~~ — **cofnięte w addendum 2026-08-26:** zastępcy z kary w celu.
 - Osobne siatki weekday vs weekend (jedna `TimeSlot` lista).
 - Filtr semestru lub roku akademickiego przy triggerze — MVP bierze wszystkie `Subjects` w bazie.
 - Gwarancja globalnego optimum — best effort w limicie 60 s.
@@ -413,8 +423,8 @@ Strony Blazor: uruchomienie, spinner, lista runów, podgląd per kierunek.
 
 #### Automated
 
-- [x] 2.1 `dotnet build` — 0 błędów po Google.OrTools i walidacji
-- [x] 2.2 `dotnet list package --vulnerable` — brak nowych krytycznych
+- [x] 2.1 `dotnet build` — 0 błędów po Google.OrTools i walidacji — 12e6d04
+- [x] 2.2 `dotnet list package --vulnerable` — brak nowych krytycznych — 12e6d04
 
 #### Manual
 
@@ -424,7 +434,7 @@ Strony Blazor: uruchomienie, spinner, lista runów, podgląd per kierunek.
 
 #### Automated
 
-- [x] 3.1 `dotnet build` — 0 błędów po solverze
+- [x] 3.1 `dotnet build` — 0 błędów po solverze — 12e6d04
 
 #### Manual
 
@@ -436,7 +446,7 @@ Strony Blazor: uruchomienie, spinner, lista runów, podgląd per kierunek.
 
 #### Automated
 
-- [x] 4.1 `dotnet build` — 0 błędów po UI
+- [x] 4.1 `dotnet build` — 0 błędów po UI — 12e6d04
 
 #### Manual
 

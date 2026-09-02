@@ -9,8 +9,28 @@ public class ScheduleGenerationService(
     IScheduleValidationService validation) : IScheduleGenerationService
 {
     private const int SolverTimeLimitSeconds = 60;
+    private static readonly SemaphoreSlim GenerationLock = new(1, 1);
 
     public async Task<ScheduleRun> GenerateAsync(CancellationToken cancellationToken = default)
+    {
+        if (!await GenerationLock.WaitAsync(0, cancellationToken))
+        {
+            return await CreateImmediateFailedRunAsync(
+                "Generowanie planu jest już w toku — poczekaj na zakończenie bieżącego uruchomienia.",
+                cancellationToken);
+        }
+
+        try
+        {
+            return await GenerateCoreAsync(cancellationToken);
+        }
+        finally
+        {
+            GenerationLock.Release();
+        }
+    }
+
+    private async Task<ScheduleRun> GenerateCoreAsync(CancellationToken cancellationToken)
     {
         var run = new ScheduleRun
         {
@@ -26,7 +46,7 @@ public class ScheduleGenerationService(
             var check = await validation.ValidateAsync(cancellationToken);
             if (!check.CanRun)
             {
-                await FailRunAsync(run, string.Join(" ", check.Issues), cancellationToken);
+                await FailRunAsync(run, string.Join(Environment.NewLine, check.Issues), cancellationToken);
                 return run;
             }
 
@@ -37,17 +57,39 @@ public class ScheduleGenerationService(
                 return run;
             }
 
+            var lecturerNamesById = await db.Lecturers.AsNoTracking()
+                .ToDictionaryAsync(
+                    l => l.Id,
+                    l => $"{l.FirstName} {l.LastName}",
+                    cancellationToken);
+
             var slots = await db.TimeSlots.AsNoTracking().OrderBy(s => s.StartTime).ToListAsync(cancellationToken);
             var slotIndexByTimeSlotId = slots
                 .Select((s, idx) => (s.Id, idx))
                 .ToDictionary(x => x.Id, x => x.idx);
+            var slotStartById = slots.ToDictionary(s => s.Id, s => s.StartTime);
 
             var solver = new ScheduleCpSatSolver();
-            var result = solver.Solve(tasks, slotIndexByTimeSlotId, SolverTimeLimitSeconds);
+            var result = await Task.Run(
+                () => solver.Solve(tasks, slotIndexByTimeSlotId, SolverTimeLimitSeconds),
+                cancellationToken);
 
             if (!result.Success)
             {
-                await FailRunAsync(run, result.ErrorMessage ?? "Generowanie nie powiodło się.", cancellationToken);
+                string message;
+                try
+                {
+                    message = tasks.Count > 0
+                        ? ScheduleInfeasibilityDiagnostics.BuildMessage(
+                            tasks, slotStartById, lecturerNamesById, result.SolverStatus)
+                        : "Nie znaleziono planu spełniającego ograniczenia.";
+                }
+                catch (Exception ex)
+                {
+                    message = $"Nie znaleziono planu spełniającego ograniczenia. (Błąd diagnostyki: {ex.Message})";
+                }
+
+                await FailRunAsync(run, message, cancellationToken);
                 return run;
             }
 
@@ -74,18 +116,28 @@ public class ScheduleGenerationService(
         }
         catch (Exception ex)
         {
-            await FailRunAsync(run, ex.Message, cancellationToken);
+            await FailRunAsync(run, SchedulePersistenceHelper.FormatException(ex), cancellationToken);
             return run;
         }
     }
 
-    private async Task FailRunAsync(ScheduleRun run, string message, CancellationToken ct)
+    private async Task<ScheduleRun> CreateImmediateFailedRunAsync(string message, CancellationToken ct)
     {
-        run.Status = ScheduleRunStatus.Failed;
-        run.ErrorMessage = message.Length > 2000 ? message[..2000] : message;
-        run.CompletedAt = DateTime.UtcNow;
+        var run = new ScheduleRun
+        {
+            StartedAt = DateTime.UtcNow,
+            CompletedAt = DateTime.UtcNow,
+            Status = ScheduleRunStatus.Failed,
+            SolverTimeLimitSeconds = SolverTimeLimitSeconds,
+            ErrorMessage = message
+        };
+        db.ScheduleRuns.Add(run);
         await db.SaveChangesAsync(ct);
+        return run;
     }
+
+    private Task FailRunAsync(ScheduleRun run, string message, CancellationToken ct) =>
+        SchedulePersistenceHelper.SaveFailedRunAsync(db, run, message, ct);
 
     private async Task<List<PlacementTask>> BuildPlacementTasksAsync(CancellationToken ct)
     {
@@ -103,8 +155,14 @@ public class ScheduleGenerationService(
         var enrollments = await db.StudyProgramEnrollments.AsNoTracking().ToListAsync(ct);
         var enrollmentLookup = enrollments.ToDictionary(e => (e.StudyProgramId, e.Semester));
 
+        var lecturers = await db.Lecturers.AsNoTracking().ToDictionaryAsync(l => l.Id, ct);
+
+        var semesterPeriods = await db.SemesterPeriods.AsNoTracking().ToListAsync(ct);
+        var nonWorkingDays = await db.NonWorkingDays.AsNoTracking().ToListAsync(ct);
+
         var subjects = await db.Subjects
             .AsNoTracking()
+            .Include(s => s.StudyProgram)
             .Include(s => s.InstructionType)
             .Include(s => s.SubjectLecturers)
             .ToListAsync(ct);
@@ -117,7 +175,14 @@ public class ScheduleGenerationService(
             if (!programs.TryGetValue(subject.StudyProgramId, out var program))
                 continue;
 
-            var primary = subject.SubjectLecturers.FirstOrDefault(sl => sl.IsPrimary);
+            var subjectLecturers = subject.SubjectLecturers
+                .OrderByDescending(sl => sl.IsPrimary)
+                .ThenBy(sl => sl.LecturerId)
+                .ToList();
+            if (subjectLecturers.Count == 0)
+                continue;
+
+            var primary = subjectLecturers.FirstOrDefault(sl => sl.IsPrimary);
             if (primary is null)
                 continue;
 
@@ -138,31 +203,70 @@ public class ScheduleGenerationService(
                 : new[] { DayOfWeek.Saturday, DayOfWeek.Sunday };
 
             var allowed = new List<ScheduleAssignment>();
-            foreach (var day in allowedDays)
+            foreach (var subjectLecturer in subjectLecturers)
             {
-                foreach (var slot in slots)
+                foreach (var day in allowedDays)
                 {
-                    if (!availabilitySet.Contains((primary.LecturerId, day, slot.Id)))
-                        continue;
+                    foreach (var slot in slots)
+                    {
+                        if (!availabilitySet.Contains((subjectLecturer.LecturerId, day, slot.Id)))
+                            continue;
 
-                    foreach (var room in roomNumbers)
-                        allowed.Add(new ScheduleAssignment(day, slot.Id, room));
+                        foreach (var room in roomNumbers)
+                        {
+                            allowed.Add(new ScheduleAssignment(
+                                subjectLecturer.LecturerId,
+                                day,
+                                slot.Id,
+                                room,
+                                subjectLecturer.IsPrimary));
+                        }
+                    }
                 }
             }
 
+            if (allowed.Count == 0)
+                continue;
+
+            lecturers.TryGetValue(primary.LecturerId, out var primaryLecturer);
+            var primaryLecturerName = primaryLecturer is not null
+                ? $"{primaryLecturer.FirstName} {primaryLecturer.LastName}"
+                : $"ID {primary.LecturerId}";
+
+            var (semesterStart, semesterEnd) = ScheduleSemesterBounds.Resolve(
+                program.AcademicYear, semesterPeriods);
+            if (semesterStart is null || semesterEnd is null)
+                continue;
+
+            var holidays = ScheduleSemesterBounds.ResolveNonWorkingDays(
+                program.AcademicYear, nonWorkingDays);
+
+            var weeklySlotCount = ScheduleWeekCalculator.ResolveWeeklySlotCount(
+                subject.NumberOfSessions,
+                semesterStart.Value,
+                semesterEnd.Value,
+                program.StudyMode,
+                holidays);
+            if (weeklySlotCount <= 0)
+                continue;
+
             for (var group = 1; group <= groupCount; group++)
             {
-                for (var session = 1; session <= subject.NumberOfSessions; session++)
+                for (var weeklySlot = 1; weeklySlot <= weeklySlotCount; weeklySlot++)
                 {
                     tasks.Add(new PlacementTask
                     {
                         TaskIndex = taskIndex++,
                         StudyProgramId = subject.StudyProgramId,
+                        Semester = subject.Semester,
                         SubjectId = subject.Id,
                         GroupIndex = group,
-                        SessionIndex = session,
+                        SessionIndex = weeklySlot,
                         InstructionTypeId = subject.InstructionTypeId,
-                        LecturerId = primary.LecturerId,
+                        PrimaryLecturerId = primary.LecturerId,
+                        SubjectName = subject.Name,
+                        StudyProgramName = program.Name,
+                        PrimaryLecturerName = primaryLecturerName,
                         AllowedAssignments = allowed
                     });
                 }

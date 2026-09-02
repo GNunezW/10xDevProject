@@ -54,7 +54,7 @@ The result is `<change-id>`.
 
 Two pre-flight checks. Either failing blocks the archive.
 
-**1. Uncommitted edits inside the change folder.** Run a bash command to check `git status --porcelain "context/changes/<change-id>/"`.
+**1. Uncommitted edits inside the change folder.** Run a shell command to check `git status --porcelain "context/changes/<change-id>/"`.
 
 If the output is non-empty, **block** and print:
 
@@ -66,7 +66,7 @@ If the output is non-empty, **block** and print:
 Commit or stash them first, then re-run /10x-archive.
 ```
 
-**2. Pre-existing staged changes anywhere.** The archive commit step (see "Move and stamp" below) bundles whatever is staged at commit time. If the user has unrelated staged changes from earlier work, they'd silently land in the `chore(archive): close ...` commit. Run a bash command to check `git diff --cached --quiet`.
+**2. Pre-existing staged changes anywhere.** The archive commit step (see "Move and stamp" below) bundles whatever is staged at commit time. If the user has unrelated staged changes from earlier work, they'd silently land in the `chore(archive): close ...` commit. Run a shell command to check `git diff --cached --quiet`.
 
 If the exit code is non-zero, **block** and print:
 
@@ -117,7 +117,7 @@ Then ask the user:
     description: `Don't archive. Exit cleanly without further action.`
   multiSelect: false
 
-If the Pending Progress check above queued a warning whose breakdown was exactly `0 automated, <Y> manual` with `<Y> ≥ 1`, append ` (Recommended)` to the `Continue archiving` label so the prompt visibly nudges toward archive — manual checks are often deferred-by-design, and archiving is the expected path. In all other cases (mixed pending, automated-only, legacy-fallback warning, or no Progress warning), present the labels verbatim.
+**Manual-only nudge**: if the Pending Progress check above queued a warning whose breakdown was exactly `0 automated, <Y> manual` with `<Y> ≥ 1`, append ` (Recommended)` to the `Continue archiving` label so the prompt visibly nudges toward archive — manual checks are often deferred-by-design, and archiving is the expected path. In all other cases (mixed pending, automated-only, legacy-fallback warning, or no Progress warning), present the labels verbatim.
 
 - **Continue archiving** → proceed to "Move and stamp" below.
 - **Resume implementation** → print `→ /10x-implement <change-id>` and copy that to clipboard via `pbcopy 2>/dev/null || clip.exe 2>/dev/null || xclip -selection clipboard 2>/dev/null || true` (or `Set-Clipboard` on PowerShell) (best effort, cross-platform). STOP.
@@ -139,16 +139,16 @@ If no warnings were queued, skip the prompt and proceed directly.
    - Use a file editing operation to update each of the three frontmatter lines. Do NOT touch any other field; in particular, leave `created` and `change_id` alone.
 
 3. **Move the folder**:
-   - Prefer running a bash command `git mv "context/changes/<change-id>" "$DEST"` so history follows.
-   - If `git mv` fails (not a git repo, or git refuses for some reason), fall back to running bash commands `mkdir -p context/archive` then `mv "context/changes/<change-id>" "$DEST"`. Print a warning if the fallback was used.
+   - Prefer `git mv "context/changes/<change-id>" "$DEST"` so history follows.
+   - If `git mv` fails (not a git repo, or git refuses for some reason), fall back to `mkdir -p context/archive` then `mv "context/changes/<change-id>" "$DEST"`. Print a warning if the fallback was used.
    - Confirm post-move: `[ -d "$DEST" ] && [ ! -d "context/changes/<change-id>" ]`. If either check fails, print a diagnostic and STOP.
 
-4. **Stage the stamp into the rename.** The edit in step 2 modified `change.md` in the working tree, but `git mv` only stages the rename with the file's HEAD content. Run a bash command `git add "$DEST/change.md"` so the frontmatter stamp lands in the same commit as the rename.
+4. **Stage the stamp into the rename.** The file editing operation in step 2 modified `change.md` in the working tree, but `git mv` only stages the rename with the file's HEAD content. Run `git add "$DEST/change.md"` so the frontmatter stamp lands in the same commit as the rename.
 
-5. **Close the matching roadmap item** — best effort; this step never blocks, never rolls back, and never prompts. A roadmap is optional; most changes won't trace to one.
+5. **Close the matching roadmap item.** Run this on **every** archive — the roadmap lookup is mandatory. "Best effort" scopes only the *edits*: a missing roadmap or an edit target that isn't found is skipped silently and never blocks, rolls back, or prompts the archive. It does NOT mean "assume there's no roadmap and skip the check." Not looking is a defect — the confirmation (step 7) must report the outcome either way.
 
-   1. Check if `context/foundation/roadmap.md` exists. If absent, skip this step silently.
-   2. Capture whether the file is already dirty by running a bash command `git status --porcelain context/foundation/roadmap.md 2>/dev/null`. (Used in sub-step 7 to decide whether to stage it into the archive commit.)
+   1. Check for file existence: `test -f context/foundation/roadmap.md`. If absent, skip this step silently.
+   2. Capture whether the file is already dirty: `ROADMAP_PREDIRTY=$(git status --porcelain context/foundation/roadmap.md 2>/dev/null)`. (Used in sub-step 7 to decide whether to stage it into the archive commit.)
    3. Read `context/foundation/roadmap.md`. Look for `<change-id>` used as a `Change ID`:
       - in the `## At a glance` table — the row whose **Change ID** column cell equals `<change-id>` exactly;
       - and in the `## Foundations` / `## Slices` bodies — the `### <ID>: …` block that contains a `- **Change ID:** <change-id>` line.
@@ -166,16 +166,14 @@ If no warnings were queued, skip the prompt and proceed directly.
 
          `<today>` is `date -u +%F` (`YYYY-MM-DD`); `<CREATED>` is the value computed in step 1 of "Compute archive destination". If the roadmap has no `## Done` heading, append the heading and this bullet at the end of the file.
    6. Bump the roadmap frontmatter: set `updated: <today as YYYY-MM-DD>`. Leave every other key (`created`, `version`, `status`, `prd_version`, `main_goal`, `top_blocker`, …) untouched. If the file has no YAML frontmatter, skip this sub-step.
-   7. **Stage it into the archive commit** — only if `git` is available **and** `ROADMAP_PREDIRTY` (sub-step 2) was empty. Then run a bash command `git add context/foundation/roadmap.md` so the roadmap close lands in the same commit as the rename + stamp. If `ROADMAP_PREDIRTY` was non-empty, the file already had uncommitted edits; leave the roadmap close in the working tree and print `⚠ context/foundation/roadmap.md had pre-existing uncommitted changes — closed roadmap item <ID> in the working tree but did NOT stage it. Commit it yourself.` If `git` is unavailable, the edit just stays in the working tree (the pre-flight already warned).
+   7. **Stage it into the archive commit** — only if `git` is available **and** `ROADMAP_PREDIRTY` (sub-step 2) was empty. Then run `git add context/foundation/roadmap.md` so the roadmap close lands in the same commit as the rename + stamp. If `ROADMAP_PREDIRTY` was non-empty, the file already had uncommitted edits; leave the roadmap close in the working tree and print `⚠ context/foundation/roadmap.md had pre-existing uncommitted changes — closed roadmap item <ID> in the working tree but did NOT stage it. Commit it yourself.` If `git` is unavailable, the edit just stays in the working tree (the pre-flight already warned).
    8. Remember `<ID>` and `<Outcome>` for the confirmation output.
 
-6. **Commit the archive.** Author one commit by running a bash command:
+6. **Commit the archive.** Author one commit:
 
    ```bash
    git commit -m "$(cat <<'EOF'
    chore(archive): close <change-id>
-
-   Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
    EOF
    )"
    ```
@@ -195,7 +193,7 @@ change.md updated:
   archived_at:  <ISO datetime>
   updated:      <today>
 
-roadmap.md:     closed <ID> "<Outcome>"  →  Status: done, entry added to ## Done    ← print only when a roadmap item matched; omit this line otherwise
+roadmap.md:     closed <ID> "<Outcome>"  →  Status: done, entry added to ## Done    ← if matched; else print: no item with Change ID "<change-id>" — checked, left untouched. Always print one of the two; it proves the lookup ran.
 
 Committed as: <short SHA> chore(archive): close <change-id>
 
@@ -214,5 +212,5 @@ The folder is now read-only by convention. To start a new change: /10x-new <new-
 - Does not run `pnpm test` / `pnpm build` / `pnpm ci:local` as a gate — the gate is lenient warn-only by design.
 - Does not push. The archive commit lands locally; `git push` is the user's call.
 - Does not rewrite the roadmap beyond closing the one matched item. When `context/foundation/roadmap.md` has an item whose `Change ID` equals the archived `<change-id>`, this skill flips only that item's `Status` (table cell + `### <ID>:` body line), appends one `## Done` bullet, and bumps the `updated:` date. It never reorders slices, recomputes the dependency graph, edits other items, or creates a roadmap that doesn't exist. No match (or no roadmap file) → roadmap untouched.
-- Does not write to `context/archive/<...>/` after the move; archived folders are read-only by convention. Other 10x skills (`/10x-research`, `/10x-frame`, `/10x-plan`, `/10x-plan-review`, `/10x-implement`, `/10x-impl-review`, `/10x-tdd`, `/10x-auto-implement`) refuse when a resolved path starts with `context/archive/`.
+- Does not write to `context/archive/<...>/` after the move; archived folders are read-only by convention. Other 10x skills (`/10x-research`, `/10x-frame`, `/10x-plan`, `/10x-plan-review`, `/10x-implement`, `/10x-impl-review`, `/10x-tdd`, `/10x-goal-implement`) refuse when a resolved path starts with `context/archive/`.
 - Does not unarchive. To revisit an archived change, open a new change with `/10x-new` and reference the archived folder for context.

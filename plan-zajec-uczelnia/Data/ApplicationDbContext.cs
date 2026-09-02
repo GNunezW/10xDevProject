@@ -13,6 +13,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<SubjectLecturer> SubjectLecturers => Set<SubjectLecturer>();
     public DbSet<TimeSlot> TimeSlots => Set<TimeSlot>();
     public DbSet<SemesterPeriod> SemesterPeriods => Set<SemesterPeriod>();
+    public DbSet<NonWorkingDay> NonWorkingDays => Set<NonWorkingDay>();
     public DbSet<LecturerAvailability> LecturerAvailabilities => Set<LecturerAvailability>();
     public DbSet<Room> Rooms => Set<Room>();
     public DbSet<InstructionType> InstructionTypes => Set<InstructionType>();
@@ -39,6 +40,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         modelBuilder.Entity<SemesterPeriod>()
             .HasIndex(sp => new { sp.AcademicYear, sp.SemesterOrdinal })
+            .IsUnique();
+
+        modelBuilder.Entity<NonWorkingDay>()
+            .HasIndex(d => new { d.AcademicYear, d.Date })
             .IsUnique();
 
         modelBuilder.Entity<InstructionType>()

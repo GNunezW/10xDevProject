@@ -4,7 +4,8 @@
 <MudDialog>
     <DialogContent>
         <MudText Typo="Typo.body2" Class="mb-3">
-            Liczba studentów na kierunku <strong>@StudyProgram.Name</strong> w poszczególnych semestrach.
+            Liczba studentów na kierunku <strong>@StudyProgram.Name</strong>
+            (@StudyDegreeRules.ShortLabel(StudyProgram.StudyDegree), semestry 1–@_maxSemester).
             Wartość 0 = brak wpisu.
         </MudText>
         <MudSimpleTable Dense="true" Bordered="true">
@@ -15,7 +16,7 @@
                 </tr>
             </thead>
             <tbody>
-                @for (var sem = 1; sem <= 7; sem++)
+                @for (var sem = 1; sem <= _maxSemester; sem++)
                 {
                     var semester = sem;
                     <tr>
@@ -41,11 +42,13 @@
     [Parameter] public StudyProgram StudyProgram { get; set; } = null!;
 
     private readonly Dictionary<int, int> _counts = [];
+    private int _maxSemester;
 
     protected override async Task OnInitializedAsync()
     {
+        _maxSemester = StudyDegreeRules.MaxSemesters(StudyProgram.StudyDegree);
         var existing = await EnrollmentService.GetByProgramAsync(StudyProgram.Id);
-        for (var sem = 1; sem <= 7; sem++)
+        for (var sem = 1; sem <= _maxSemester; sem++)
             _counts[sem] = existing.GetValueOrDefault(sem, 0);
     }
 

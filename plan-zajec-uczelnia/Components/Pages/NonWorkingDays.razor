@@ -1,0 +1,87 @@
+@page "/dni-wolne"
+@rendermode InteractiveServer
+@inject INonWorkingDayService DayService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Dni wolne</PageTitle>
+
+<MudText Typo="Typo.h5" GutterBottom="true">Dni wolne od zajęć</MudText>
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+    Święta i inne dni bez zajęć. Pusty rok akademicki = dzień obowiązuje w każdym roku.
+    Wpływa na częstotliwość spotkań i daty w podglądzie planu.
+</MudText>
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+           OnClick="OpenAddDialog" Class="mb-4">
+    Dodaj dzień wolny
+</MudButton>
+
+<MudDataGrid T="NonWorkingDay" Items="_days" Hover="true" Striped="true" Dense="true">
+    <Columns>
+        <TemplateColumn Title="Data">
+            <CellTemplate>@context.Item.Date.ToString("dd.MM.yyyy")</CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="d => d.Name" Title="Nazwa" />
+        <TemplateColumn Title="Rok akademicki">
+            <CellTemplate>@(string.IsNullOrWhiteSpace(context.Item.AcademicYear) ? "Wszystkie" : context.Item.AcademicYear)</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Akcje" CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                               OnClick="@(() => OpenEditDialog(context.Item))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                               OnClick="@(() => DeleteAsync(context.Item))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private List<NonWorkingDay> _days = [];
+
+    protected override async Task OnInitializedAsync() =>
+        _days = await DayService.GetAllAsync();
+
+    private async Task OpenAddDialog() => await ShowDialog(new NonWorkingDay(), false);
+
+    private async Task OpenEditDialog(NonWorkingDay day) =>
+        await ShowDialog(new NonWorkingDay
+        {
+            Id = day.Id,
+            AcademicYear = day.AcademicYear,
+            Date = day.Date,
+            Name = day.Name
+        }, true);
+
+    private async Task ShowDialog(NonWorkingDay model, bool isEdit)
+    {
+        var parameters = new DialogParameters<NonWorkingDayDialog>
+        {
+            { d => d.Model, model },
+            { d => d.IsEdit, isEdit }
+        };
+        var dialog = await DialogService.ShowAsync<NonWorkingDayDialog>(
+            isEdit ? "Edytuj dzień wolny" : "Dodaj dzień wolny", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+            _days = await DayService.GetAllAsync();
+    }
+
+    private async Task DeleteAsync(NonWorkingDay day)
+    {
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { d => d.Message, $"Usunąć „{day.Name}” ({day.Date:dd.MM.yyyy})?" },
+            { d => d.YesText, "Usuń" }
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Potwierdź usunięcie", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await DayService.DeleteAsync(day.Id);
+            _days = await DayService.GetAllAsync();
+            Snackbar.Add("Dzień wolny usunięty.", Severity.Success);
+        }
+    }
+}

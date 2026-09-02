@@ -1,6 +1,10 @@
 @page "/plan/{RunId:int}"
 @rendermode InteractiveServer
+@implements IAsyncDisposable
 @inject IScheduleViewService ViewService
+@inject IScheduleExportService ExportService
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 
 <PageTitle>Podgląd planu</PageTitle>
@@ -14,14 +18,22 @@
 <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack"
            Href="/generuj-plan" Class="mb-3">Wróć</MudButton>
 
-<MudText Typo="Typo.h5" GutterBottom="true">Plan zajęć — uruchomienie #@RunId</MudText>
+<MudText Typo="Typo.h5" GutterBottom="true">Plan tygodniowy — uruchomienie #@RunId</MudText>
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+    Ten sam układ powtarza się co tydzień przez cały semestr.
+</MudText>
 <MudText Typo="Typo.caption" Class="mb-4">
     @(_run.StartedAt.ToLocalTime().ToString("g")) — @StatusLabel(_run.Status)
 </MudText>
 
 @if (_run.Status == ScheduleRunStatus.Failed)
 {
-    <MudAlert Severity="Severity.Error">@(_run.ErrorMessage ?? "Generowanie nie powiodło się.")</MudAlert>
+    <MudAlert Severity="Severity.Error">
+        @foreach (var line in (_run.ErrorMessage ?? "Generowanie nie powiodło się.").Split('\n'))
+        {
+            <MudText Typo="Typo.body2">@line</MudText>
+        }
+    </MudAlert>
     return;
 }
 
@@ -31,16 +43,56 @@
     return;
 }
 
-<MudSelect T="int" Value="_selectedProgramId" Label="Kierunek" Class="mb-4"
-           ValueChanged="OnProgramChanged">
-    @foreach (var p in _programs)
-    {
-        <MudSelectItem Value="p.Id">@p.Name</MudSelectItem>
-    }
-</MudSelect>
+<MudStack Row="true" AlignItems="AlignItems.End" Wrap="Wrap.Wrap" Spacing="2" Class="mb-4">
+    <MudSelect T="int" Value="_selectedProgramId" Label="Kierunek" Style="min-width: 240px"
+               ValueChanged="OnProgramChanged">
+        @foreach (var p in _programs)
+        {
+            <MudSelectItem Value="p.Id">@p.Name</MudSelectItem>
+        }
+    </MudSelect>
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Download"
+               Disabled="_selectedProgramId <= 0 || _exporting"
+               OnClick="DownloadExcelAsync">
+        Pobierz Excel
+    </MudButton>
+</MudStack>
 
-@if (_selectedProgramId > 0)
+@if (_selectedProgramId > 0 && _semesters.Count > 0)
 {
+    <MudSelect T="int" Value="_selectedSemester" Label="Semestr" Class="mb-4"
+               ValueChanged="OnSemesterChanged">
+        @foreach (var sem in _semesters)
+        {
+            <MudSelectItem Value="sem">Semestr @sem</MudSelectItem>
+        }
+    </MudSelect>
+}
+
+@if (_selectedProgramId > 0 && _selectedSemester > 0)
+{
+    @if (_groupSummaries.Count > 0)
+    {
+        <MudText Typo="Typo.subtitle1" Class="mb-1">Spotkania w semestrze (per przedmiot i grupa)</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+            Slotów / tydz. — częstotliwość w szablonie (więcej godzin → więcej spotkań tygodniowo). Daty z uwzgl. świąt z /dni-wolne.
+        </MudText>
+        <MudDataGrid T="ScheduleGroupSummary" Items="_groupSummaries" Hover="true" Striped="true" Dense="true" Class="mb-4">
+            <Columns>
+                <PropertyColumn Property="s => s.SubjectName" Title="Przedmiot" />
+                <PropertyColumn Property="s => s.GroupIndex" Title="Grupa" />
+                <PropertyColumn Property="s => s.MeetingsInSemester" Title="Spotkań w sem." />
+                <PropertyColumn Property="s => s.WeeklySlots" Title="Slotów / tydz." />
+                <TemplateColumn Title="Ostatnie zajęcia">
+                    <CellTemplate>
+                        @(context.Item.LastSessionDate?.ToString("dd.MM.yyyy") ?? "—")
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+    }
+
     <MudGrid Class="mb-4">
         @foreach (var m in _gapMetrics)
         {
@@ -55,26 +107,59 @@
         }
     </MudGrid>
 
-    <MudTable Items="_sessions" Dense="true" Hover="true" Striped="true">
-        <HeaderContent>
-            <MudTh>Dzień</MudTh>
-            <MudTh>Godzina</MudTh>
-            <MudTh>Przedmiot</MudTh>
-            <MudTh>Gr.</MudTh>
-            <MudTh>Sesja</MudTh>
-            <MudTh>Sala</MudTh>
-            <MudTh>Prowadzący</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd>@DayLabel(context.DayOfWeek)</MudTd>
-            <MudTd>@context.TimeSlot.StartTime.ToString("HH\\:mm")</MudTd>
-            <MudTd>@context.Subject.Name</MudTd>
-            <MudTd>@context.GroupIndex</MudTd>
-            <MudTd>@context.SessionIndex</MudTd>
-            <MudTd>@context.RoomNumber</MudTd>
-            <MudTd>@context.Lecturer.FirstName @context.Lecturer.LastName</MudTd>
-        </RowTemplate>
-    </MudTable>
+    <MudPaper Class="pa-2 mb-4" Elevation="1">
+        <MudSimpleTable Dense="true" Hover="true" Bordered="true" Striped="true">
+            <thead>
+                <tr>
+                    <th>Godzina</th>
+                    @foreach (var day in _grid.Days)
+                    {
+                        <th>@ShortDayLabel(day)</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var slot in _grid.TimeSlots)
+                {
+                    var endTime = slot.StartTime.Add(TimeSpan.FromMinutes(90));
+                    <tr>
+                        <td>
+                            <MudText Typo="Typo.body2">@slot.StartTime.ToString("HH\\:mm")</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@endTime.ToString("HH\\:mm")</MudText>
+                        </td>
+                        @foreach (var day in _grid.Days)
+                        {
+                            var key = new ScheduleGridCellKey(day, slot.Id);
+                            _grid.Cells.TryGetValue(key, out var cellSessions);
+                            <td>
+                                @if (cellSessions is { Count: > 0 })
+                                {
+                                    @foreach (var session in cellSessions)
+                                    {
+                                        <MudStack Spacing="0" Class="mb-2">
+                                            <MudText Typo="Typo.body2"><strong>@(session.Subject?.Name ?? "—")</strong></MudText>
+                                            @if (session.SessionIndex > 1)
+                                            {
+                                                <MudText Typo="Typo.caption">Sem. @(session.Subject?.Semester ?? 0), gr. @session.GroupIndex, blok @session.SessionIndex</MudText>
+                                            }
+                                            else
+                                            {
+                                                <MudText Typo="Typo.caption">Sem. @(session.Subject?.Semester ?? 0), gr. @session.GroupIndex</MudText>
+                                            }
+                                            <MudText Typo="Typo.caption">Sala @session.RoomNumber</MudText>
+                                            <MudText Typo="Typo.caption">
+                                                @(session.Lecturer is null ? "—" : $"{session.Lecturer.FirstName} {session.Lecturer.LastName}")
+                                            </MudText>
+                                        </MudStack>
+                                    }
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    </MudPaper>
 }
 
 @code {
@@ -82,35 +167,166 @@
 
     private ScheduleRun? _run;
     private List<StudyProgram> _programs = [];
+    private List<int> _semesters = [];
     private int _selectedProgramId;
-    private List<ScheduledSession> _sessions = [];
-    private IReadOnlyList<DayGapMetrics> _gapMetrics = [];
-
-    protected override async Task OnParametersSetAsync()
+    private int _selectedSemester;
+    private bool _exporting;
+    private ScheduleGridData _grid = new()
     {
-        _run = await ViewService.GetRunAsync(RunId);
-        if (_run?.Status == ScheduleRunStatus.Succeeded)
-        {
-            _programs = await ViewService.GetProgramsForRunAsync(RunId);
-            if (_programs.Count > 0 && _selectedProgramId == 0)
-            {
-                _selectedProgramId = _programs[0].Id;
-                await LoadProgramDataAsync();
-            }
-        }
-    }
+        TimeSlots = [],
+        Days = [],
+        Cells = new Dictionary<ScheduleGridCellKey, IReadOnlyList<ScheduledSession>>()
+    };
+    private IReadOnlyList<DayGapMetrics> _gapMetrics = [];
+    private List<ScheduleGroupSummary> _groupSummaries = [];
+    private bool _isInitializing;
+    private int _loadVersion;
+    private readonly SemaphoreSlim _loadLock = new(1, 1);
+
+    protected override async Task OnParametersSetAsync() =>
+        await ReloadAsync();
 
     private async Task OnProgramChanged(int programId)
     {
+        if (_isInitializing || programId == _selectedProgramId)
+            return;
+
         _selectedProgramId = programId;
-        await LoadProgramDataAsync();
+        _selectedSemester = 0;
+        await ReloadAsync(programDataOnly: true);
     }
 
-    private async Task LoadProgramDataAsync()
+    private async Task OnSemesterChanged(int semester)
     {
-        _sessions = await ViewService.GetSessionsAsync(RunId, _selectedProgramId);
-        _gapMetrics = await ViewService.GetGapMetricsAsync(RunId, _selectedProgramId);
+        if (_isInitializing || semester == _selectedSemester)
+            return;
+
+        _selectedSemester = semester;
+        await ReloadAsync(scheduleDataOnly: true);
     }
+
+    private async Task DownloadExcelAsync()
+    {
+        if (_selectedProgramId <= 0 || _exporting)
+            return;
+
+        _exporting = true;
+        try
+        {
+            var file = await ExportService.ExportProgramAsync(RunId, _selectedProgramId);
+            if (file is null)
+            {
+                Snackbar.Add("Nie udało się przygotować pliku — wybierz kierunek z wygenerowanego planu.", Severity.Warning);
+                return;
+            }
+
+            using var stream = new MemoryStream(file.Content);
+            using var streamRef = new DotNetStreamReference(stream);
+            await JS.InvokeVoidAsync("downloadFileFromStream", file.FileName, streamRef);
+        }
+        finally
+        {
+            _exporting = false;
+        }
+    }
+
+    private async Task ReloadAsync(bool programDataOnly = false, bool scheduleDataOnly = false)
+    {
+        await _loadLock.WaitAsync();
+        var version = Interlocked.Increment(ref _loadVersion);
+        _isInitializing = true;
+        try
+        {
+            if (!programDataOnly && !scheduleDataOnly)
+            {
+                _run = await ViewService.GetRunAsync(RunId);
+                if (version != _loadVersion)
+                    return;
+
+                if (_run?.Status != ScheduleRunStatus.Succeeded)
+                {
+                    _programs = [];
+                    _semesters = [];
+                    _selectedProgramId = 0;
+                    _selectedSemester = 0;
+                    _gapMetrics = [];
+                    _grid = EmptyGrid();
+                    _groupSummaries = [];
+                    return;
+                }
+
+                _programs = await ViewService.GetProgramsForRunAsync(RunId);
+                if (version != _loadVersion || _programs.Count == 0)
+                    return;
+
+                if (_selectedProgramId == 0 || _programs.All(p => p.Id != _selectedProgramId))
+                    _selectedProgramId = _programs[0].Id;
+            }
+
+            if (version != _loadVersion || _selectedProgramId <= 0)
+                return;
+
+            if (!scheduleDataOnly)
+            {
+                _semesters = await ViewService.GetSemestersForProgramRunAsync(RunId, _selectedProgramId);
+                if (version != _loadVersion)
+                    return;
+
+                if (_semesters.Count == 0)
+                {
+                    _selectedSemester = 0;
+                    _gapMetrics = [];
+                    _grid = EmptyGrid();
+                    _groupSummaries = [];
+                    return;
+                }
+
+                if (_selectedSemester == 0 || !_semesters.Contains(_selectedSemester))
+                    _selectedSemester = _semesters[0];
+            }
+
+            if (version != _loadVersion || _selectedSemester <= 0)
+                return;
+
+            var data = await ViewService.GetProgramScheduleAsync(RunId, _selectedProgramId, _selectedSemester);
+            if (version != _loadVersion)
+                return;
+
+            _gapMetrics = data.Metrics;
+            _grid = data.Grid;
+            _groupSummaries = await ViewService.GetGroupSummariesAsync(RunId, _selectedProgramId, _selectedSemester);
+        }
+        finally
+        {
+            _isInitializing = false;
+            _loadLock.Release();
+        }
+    }
+
+    private static ScheduleGridData EmptyGrid() => new()
+    {
+        TimeSlots = [],
+        Days = [],
+        Cells = new Dictionary<ScheduleGridCellKey, IReadOnlyList<ScheduledSession>>()
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        _loadLock.Dispose();
+        await ValueTask.CompletedTask;
+    }
+
+    private static string ShortDayLabel(DayOfWeek day) => day switch
+    {
+        DayOfWeek.Monday => "Pon",
+        DayOfWeek.Tuesday => "Wt",
+        DayOfWeek.Wednesday => "Śr",
+        DayOfWeek.Thursday => "Czw",
+        DayOfWeek.Friday => "Pt",
+        DayOfWeek.Saturday => "Sob",
+        DayOfWeek.Sunday => "Nd",
+        _ => day.ToString()
+    };
 
     private static string StatusLabel(ScheduleRunStatus status) => status switch
     {

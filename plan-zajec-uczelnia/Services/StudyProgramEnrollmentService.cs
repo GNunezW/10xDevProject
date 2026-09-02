@@ -27,11 +27,17 @@ public class StudyProgramEnrollmentService(ApplicationDbContext db) : IStudyProg
 
     public async Task SaveAsync(int studyProgramId, IEnumerable<(int Semester, int StudentCount)> entries)
     {
+        var program = await db.StudyPrograms.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == studyProgramId)
+            ?? throw new InvalidOperationException("Nie znaleziono kierunku studiów.");
+
         var existing = db.StudyProgramEnrollments.Where(e => e.StudyProgramId == studyProgramId);
         db.StudyProgramEnrollments.RemoveRange(existing);
 
         foreach (var (semester, count) in entries.Where(e => e.StudentCount > 0))
         {
+            StudyDegreeRules.ValidateSemester(program.StudyDegree, semester);
+
             db.StudyProgramEnrollments.Add(new StudyProgramEnrollment
             {
                 StudyProgramId = studyProgramId,

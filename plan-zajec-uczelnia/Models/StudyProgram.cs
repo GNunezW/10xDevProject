@@ -11,6 +11,8 @@ public class StudyProgram
 
     public StudyMode StudyMode { get; set; }
 
+    public StudyDegree StudyDegree { get; set; } = StudyDegree.FirstDegreeEngineer;
+
     [Required, MaxLength(20)]
     public string AcademicYear { get; set; } = string.Empty;
 

@@ -1,0 +1,62 @@
+@inject INonWorkingDayService DayService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" Model="Model">
+            <MudTextField @bind-Value="Model.Name" Label="Nazwa (np. Boże Narodzenie)" Required="true"
+                          MaxLength="100" Class="mb-3" />
+            <MudDatePicker @bind-Date="_date" Label="Data" Required="true"
+                           DateFormat="dd.MM.yyyy" Class="mb-3" />
+            <MudTextField @bind-Value="Model.AcademicYear" Label="Rok akademicki (opcjonalnie, np. 2025/2026)"
+                          MaxLength="20" HelperText="Puste = obowiązuje w każdym roku" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Anuluj</MudButton>
+        <MudButton Color="Color.Primary" OnClick="SubmitAsync">Zapisz</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public NonWorkingDay Model { get; set; } = new();
+    [Parameter] public bool IsEdit { get; set; }
+
+    private MudForm _form = default!;
+    private DateTime? _date;
+
+    protected override void OnParametersSet()
+    {
+        _date = Model.Date == default ? null : Model.Date.ToDateTime(TimeOnly.MinValue);
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+        if (_date is null)
+        {
+            Snackbar.Add("Podaj datę.", Severity.Warning);
+            return;
+        }
+
+        Model.Date = DateOnly.FromDateTime(_date.Value);
+        Model.AcademicYear = string.IsNullOrWhiteSpace(Model.AcademicYear) ? null : Model.AcademicYear.Trim();
+
+        try
+        {
+            if (IsEdit)
+                await DayService.UpdateAsync(Model);
+            else
+                await DayService.CreateAsync(Model);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (InvalidOperationException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

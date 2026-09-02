@@ -22,6 +22,11 @@
             </CellTemplate>
         </TemplateColumn>
         <PropertyColumn Property="p => p.AcademicYear" Title="Rok akademicki" />
+        <TemplateColumn Title="Stopień">
+            <CellTemplate>
+                @StudyDegreeRules.ShortLabel(context.Item.StudyDegree)
+            </CellTemplate>
+        </TemplateColumn>
         <TemplateColumn Title="Akcje" CellClass="d-flex justify-end">
             <CellTemplate>
                 <MudIconButton Icon="@Icons.Material.Filled.Groups" Size="Size.Small" Color="Color.Info"
@@ -57,6 +62,7 @@
             Id = program.Id,
             Name = program.Name,
             StudyMode = program.StudyMode,
+            StudyDegree = program.StudyDegree,
             AcademicYear = program.AcademicYear
         };
         _isEdit = true;

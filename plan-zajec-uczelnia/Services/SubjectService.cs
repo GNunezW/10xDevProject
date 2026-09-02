@@ -33,6 +33,7 @@ public class SubjectService(ApplicationDbContext db) : ISubjectService
     {
         var ids = lecturerIds.Distinct().ToList();
         ValidateLecturers(ids, primaryLecturerId);
+        await ValidateSemesterAsync(subject.StudyProgramId, subject.Semester);
 
         db.Subjects.Add(subject);
         await db.SaveChangesAsync();
@@ -55,6 +56,7 @@ public class SubjectService(ApplicationDbContext db) : ISubjectService
     {
         var ids = lecturerIds.Distinct().ToList();
         ValidateLecturers(ids, primaryLecturerId);
+        await ValidateSemesterAsync(subject.StudyProgramId, subject.Semester);
 
         var existing = await db.Subjects.FindAsync(subject.Id);
         if (existing is null) return;
@@ -99,5 +101,15 @@ public class SubjectService(ApplicationDbContext db) : ISubjectService
 
         if (!lecturerIds.Contains(primaryLecturerId))
             throw new InvalidOperationException("Główny prowadzący musi być wśród wybranych prowadzących.");
+    }
+
+    private async Task ValidateSemesterAsync(int studyProgramId, int semester)
+    {
+        var program = await db.StudyPrograms.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == studyProgramId);
+        if (program is null)
+            throw new InvalidOperationException("Nie znaleziono kierunku studiów.");
+
+        StudyDegreeRules.ValidateSemester(program.StudyDegree, semester);
     }
 }

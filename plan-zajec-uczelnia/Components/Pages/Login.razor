@@ -1,0 +1,57 @@
+@page "/login"
+@layout LoginLayout
+@attribute [AllowAnonymous]
+@inject NavigationManager Navigation
+
+<PageTitle>Logowanie</PageTitle>
+
+<MudPaper Class="pa-6" Elevation="2">
+    <MudText Typo="Typo.h5" GutterBottom="true">Logowanie koordynatora</MudText>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
+    }
+
+    <form method="post" action="/account/login" class="mud-width-full">
+        <div class="mb-3">
+            <label class="mud-typography mud-typography-body2 mb-1" for="email">E-mail</label>
+            <input id="email" name="email" type="email" required class="mud-input-slot mud-input-root mud-input-root-outlined mud-input-root-margin-dense" />
+        </div>
+        <div class="mb-3">
+            <label class="mud-typography mud-typography-body2 mb-1" for="password">Hasło</label>
+            <input id="password" name="password" type="password" required class="mud-input-slot mud-input-root mud-input-root-outlined mud-input-root-margin-dense" />
+        </div>
+        @if (!string.IsNullOrEmpty(_returnUrl))
+        {
+            <input type="hidden" name="returnUrl" value="@_returnUrl" />
+        }
+        <button type="submit" class="mud-button-root mud-button mud-button-filled mud-button-filled-primary mud-width-full mud-ripple">
+            Zaloguj
+        </button>
+    </form>
+</MudPaper>
+
+@code {
+    private string? _error;
+    private string? _returnUrl;
+
+    protected override void OnInitialized()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+
+        if (query.TryGetValue("returnUrl", out var returnValue))
+            _returnUrl = returnValue.ToString();
+
+        if (!query.TryGetValue("error", out var errorValue))
+            return;
+
+        _error = errorValue.ToString() switch
+        {
+            "locked" => "Konto tymczasowo zablokowane — spróbuj później.",
+            "invalid" => "Nieprawidłowy e-mail lub hasło.",
+            _ => "Logowanie nie powiodło się."
+        };
+    }
+}

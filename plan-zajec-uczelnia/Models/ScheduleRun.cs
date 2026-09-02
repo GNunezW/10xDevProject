@@ -12,7 +12,7 @@ public class ScheduleRun
 
     public ScheduleRunStatus Status { get; set; }
 
-    [MaxLength(2000)]
+    [MaxLength(8000)]
     public string? ErrorMessage { get; set; }
 
     public int SolverTimeLimitSeconds { get; set; } = 60;

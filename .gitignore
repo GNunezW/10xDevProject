@@ -4,3 +4,4 @@
 *.scaffold
 **/Properties.scaffold/
 plan-zajec-uczelnia/short-solstice/
+**/.idea/

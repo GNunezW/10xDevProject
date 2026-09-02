@@ -15,10 +15,16 @@
                     <MudSelectItem Value="p.Id">@p.Name (@p.AcademicYear)</MudSelectItem>
                 }
             </MudSelect>
-            <MudNumericField T="int" Value="Model.Semester" Label="Semestr" Min="1" Max="7"
+            <MudNumericField T="int" Value="Model.Semester" Label="Semestr" Min="1" Max="@_maxSemester"
                              Required="true" Class="mb-3" ValueChanged="OnSemesterChanged" />
+            @if (Model.StudyProgramId > 0)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3">
+                    Limit semestrów dla tego kierunku: @_maxSemester
+                </MudText>
+            }
             <MudNumericField T="int" @bind-Value="Model.NumberOfSessions"
-                             Label="Liczba zajęć w semestrze (× 90 min)" Min="1"
+                             Label="Liczba zajęć w semestrze (× 90 min, łącznie)" Min="1"
                              Required="true" Class="mb-3" />
             <MudSelect T="int" Value="Model.InstructionTypeId" Label="Typ zajęć" Required="true" Class="mb-3"
                        ValueChanged="OnInstructionTypeChanged">
@@ -86,6 +92,7 @@
     private int _studentCount;
     private int _estimatedGroups;
     private int _maxPerGroup;
+    private int _maxSemester = 7;
 
     protected override void OnParametersSet()
     {
@@ -93,13 +100,27 @@
         _primaryLecturerId = PrimaryLecturerId;
         if (_primaryLecturerId == 0 && _selectedIds.Count > 0)
             _primaryLecturerId = _selectedIds.First();
+        UpdateMaxSemester();
+        if (Model.Semester > _maxSemester)
+            Model.Semester = _maxSemester;
         _ = RefreshGroupEstimateAsync();
     }
 
     private async Task OnStudyProgramChanged(int value)
     {
         Model.StudyProgramId = value;
+        UpdateMaxSemester();
+        if (Model.Semester > _maxSemester)
+            Model.Semester = _maxSemester;
         await RefreshGroupEstimateAsync();
+    }
+
+    private void UpdateMaxSemester()
+    {
+        var program = Programs.FirstOrDefault(p => p.Id == Model.StudyProgramId);
+        _maxSemester = program is not null
+            ? StudyDegreeRules.MaxSemesters(program.StudyDegree)
+            : 7;
     }
 
     private async Task OnSemesterChanged(int value)

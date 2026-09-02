@@ -1,17 +1,16 @@
 @page "/generuj-plan"
 @rendermode InteractiveServer
-@inject IScheduleValidationService ValidationService
-@inject IScheduleGenerationService GenerationService
-@inject IScheduleViewService ViewService
+@inject IServiceScopeFactory ScopeFactory
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
+@implements IAsyncDisposable
 
 <PageTitle>Generuj plan</PageTitle>
 
 <MudText Typo="Typo.h5" GutterBottom="true">Generowanie planu zajęć</MudText>
 
 <MudText Typo="Typo.body2" Class="mb-4">
-    Jedno uruchomienie układa plan dla wszystkich kierunków (globalna alokacja sal). Limit solvera: 60 s.
+    Jedno uruchomienie układa <strong>plan tygodniowy</strong> (powtarzalny co tydzień przez semestr) dla wszystkich kierunków. Limit solvera: 60 s.
 </MudText>
 
 @if (_validation is not null)
@@ -46,7 +45,7 @@
 
 @if (!string.IsNullOrEmpty(_lastError))
 {
-    <MudAlert Severity="Severity.Error" Class="mb-4">@_lastError</MudAlert>
+    <MudAlert Severity="Severity.Error" Class="mb-4" Style="white-space: pre-wrap">@_lastError</MudAlert>
 }
 
 <MudText Typo="Typo.h6" Class="mb-2">Ostatnie uruchomienia</MudText>
@@ -67,7 +66,7 @@
             }
             else if (context.Status == ScheduleRunStatus.Failed && !string.IsNullOrEmpty(context.ErrorMessage))
             {
-                <MudText Typo="Typo.caption">@context.ErrorMessage</MudText>
+                <MudText Typo="Typo.caption" Style="white-space: pre-wrap">@context.ErrorMessage</MudText>
             }
         </MudTd>
     </RowTemplate>
@@ -78,23 +77,43 @@
     private List<ScheduleRun> _runs = [];
     private bool _generating;
     private string? _lastError;
+    private readonly SemaphoreSlim _operationLock = new(1, 1);
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync() => await LoadPageDataAsync();
+
+    private async Task LoadPageDataAsync()
     {
-        _validation = await ValidationService.ValidateAsync();
-        _runs = await ViewService.GetRecentRunsAsync();
+        await _operationLock.WaitAsync();
+        try
+        {
+            await using var scope = ScopeFactory.CreateAsyncScope();
+            var validation = scope.ServiceProvider.GetRequiredService<IScheduleValidationService>();
+            var view = scope.ServiceProvider.GetRequiredService<IScheduleViewService>();
+
+            _validation = await validation.ValidateAsync();
+            _runs = await view.GetRecentRunsAsync();
+        }
+        finally
+        {
+            _operationLock.Release();
+        }
     }
 
     private async Task GenerateAsync()
     {
+        await _operationLock.WaitAsync();
         _generating = true;
         _lastError = null;
         StateHasChanged();
 
         try
         {
-            var run = await GenerationService.GenerateAsync();
-            _runs = await ViewService.GetRecentRunsAsync();
+            await using var scope = ScopeFactory.CreateAsyncScope();
+            var generation = scope.ServiceProvider.GetRequiredService<IScheduleGenerationService>();
+            var view = scope.ServiceProvider.GetRequiredService<IScheduleViewService>();
+
+            var run = await generation.GenerateAsync();
+            _runs = await view.GetRecentRunsAsync();
 
             if (run.Status == ScheduleRunStatus.Succeeded)
             {
@@ -115,7 +134,7 @@
         finally
         {
             _generating = false;
-            _validation = await ValidationService.ValidateAsync();
+            _operationLock.Release();
         }
     }
 
@@ -126,4 +145,10 @@
         ScheduleRunStatus.Failed => "Błąd",
         _ => status.ToString()
     };
+
+    public ValueTask DisposeAsync()
+    {
+        _operationLock.Dispose();
+        return ValueTask.CompletedTask;
+    }
 }
