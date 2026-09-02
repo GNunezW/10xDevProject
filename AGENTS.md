@@ -15,6 +15,7 @@ Plan Zajęć Uczelnia — MVP do planowania zajęć na uczelni (optymalizacja ok
 - `context/foundation/` — PRD, shape-notes, tech-stack, lessons
 - `context/changes/` — artefakty zmian (`/10x-new`, `/10x-archive`)
 - `plan-zajec-uczelnia/` — `@plan-zajec-uczelnia/plan-zajec-uczelnia.csproj`, API
+- `plan-zajec-uczelnia.Tests/` — xUnit smoke tests (ScheduleWeekCalculator, GetDaysForMode); bez bazy
 - `.cursor/skills/` — workflow 10xDevs
 
 Bootstrap log (ostatni przebieg 2026-05-21): `@context/changes/bootstrap-verification/verification.md`.
@@ -24,10 +25,9 @@ Bootstrap log (ostatni przebieg 2026-05-21): `@context/changes/bootstrap-verific
 Z katalogu `plan-zajec-uczelnia/`:
 
 - `dotnet restore` / `dotnet build` — obowiązkowe przed PR
+- `dotnet test ../plan-zajec-uczelnia.Tests` — smoke testy logiki szablonu tygodnia (bez bazy)
 - `dotnet run` — dev server; pipeline w `@plan-zajec-uczelnia/Program.cs`
 - `dotnet list package --vulnerable` — audyt pakietów
-
-Brak projektu testowego — po dodaniu xUnit dopisz `dotnet test` tutaj.
 
 ## Coding conventions
 
