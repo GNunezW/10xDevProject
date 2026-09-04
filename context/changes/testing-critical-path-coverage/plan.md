@@ -270,23 +270,23 @@ No database migrations. No `.sln` — CI Phase 4 (test-plan) will invoke the tes
 
 #### Automated
 
-- [x] 1.1 `dotnet new xunit3` (or equivalent) produces a project that restores
-- [x] 1.2 `dotnet test plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj` exits 0 after scaffold
+- [x] 1.1 `dotnet new xunit3` (or equivalent) produces a project that restores — 895fb5e
+- [x] 1.2 `dotnet test plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj` exits 0 after scaffold — 895fb5e
 
 #### Manual
 
-- [x] 1.3 Human confirms the test project sits beside `plan-zajec-uczelnia/`, not inside `Components/` or `10x-project-tests/`
+- [x] 1.3 Human confirms the test project sits beside `plan-zajec-uczelnia/`, not inside `Components/` or `10x-project-tests/` — 895fb5e
 
 ### Phase 2: Staffing oracle (risk #1)
 
 #### Automated
 
-- [ ] 2.1 `dotnet test` — staffing facts pass
-- [ ] 2.2 `dotnet build` of web + test projects — 0 errors
+- [x] 2.1 `dotnet test` — staffing facts pass
+- [x] 2.2 `dotnet build` of web + test projects — 0 errors
 
 #### Manual
 
-- [ ] 2.3 Skim test names: they describe behavior (feasible / slot shortage), not “covers Evaluate”
+- [x] 2.3 Skim test names: they describe behavior (feasible / slot shortage), not “covers Evaluate”
 
 ### Phase 3: Collision oracle + tiny CP-SAT (risks #2 and #1 solver)
 
