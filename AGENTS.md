@@ -15,7 +15,7 @@ Plan Zajęć Uczelnia — MVP do planowania zajęć na uczelni (optymalizacja ok
 - `context/foundation/` — PRD, shape-notes, tech-stack, lessons
 - `context/changes/` — artefakty zmian (`/10x-new`, `/10x-archive`)
 - `plan-zajec-uczelnia/` — `@plan-zajec-uczelnia/plan-zajec-uczelnia.csproj`, API
-- `plan-zajec-uczelnia.Tests/` — xUnit v3; `dotnet test --project plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj`
+- `plan-zajec-uczelnia.Tests/` — xUnit v3 (obsada, kolizje, tryb studiów, WeekCalculator); `dotnet test --project plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj`
 - `.cursor/skills/` — workflow 10xDevs
 
 Bootstrap log (ostatni przebieg 2026-05-21): `@context/changes/bootstrap-verification/verification.md`.
@@ -42,8 +42,8 @@ Planowane (PRD § Business Logic): PostgreSQL, auth, import, solver harmonogramu
 
 Brak commitów w repo — przy `git init` używaj Conventional Commits (`feat:`, `fix:`). PR: który FR/change-id, wynik `dotnet build`, jawna lista edycji w `context/`.
 
-## CI and deploy (planned)
+## CI and deploy
 
-Azure App Service + GitHub Actions (`@context/foundation/tech-stack.md`). Brak `.github/workflows/` — nie zakładaj gate’a CI, dopóki workflow nie powstanie.
+Azure App Service + GitHub Actions (`@context/foundation/tech-stack.md`). Workflow `@.github/workflows/ci.yml` odpala `dotnet restore` + `dotnet build` na web csproj (bez `dotnet test`, bez deployu).
 
 Frontend koordynatora **poza repo** — na razie API-first.
