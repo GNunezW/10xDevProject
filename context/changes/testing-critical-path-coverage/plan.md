@@ -281,23 +281,23 @@ No database migrations. No `.sln` — CI Phase 4 (test-plan) will invoke the tes
 
 #### Automated
 
-- [x] 2.1 `dotnet test` — staffing facts pass
-- [x] 2.2 `dotnet build` of web + test projects — 0 errors
+- [x] 2.1 `dotnet test` — staffing facts pass — 1245a65
+- [x] 2.2 `dotnet build` of web + test projects — 0 errors — 1245a65
 
 #### Manual
 
-- [x] 2.3 Skim test names: they describe behavior (feasible / slot shortage), not “covers Evaluate”
+- [x] 2.3 Skim test names: they describe behavior (feasible / slot shortage), not “covers Evaluate” — 1245a65
 
 ### Phase 3: Collision oracle + tiny CP-SAT (risks #2 and #1 solver)
 
 #### Automated
 
-- [ ] 3.1 `dotnet test` — oracle facts + Solve fixture pass
-- [ ] 3.2 Solve fixture completes well under 60 s (target: a few seconds)
+- [x] 3.1 `dotnet test` — oracle facts + Solve fixture pass
+- [x] 3.2 Solve fixture completes well under 60 s (target: a few seconds)
 
 #### Manual
 
-- [ ] 3.3 Confirm tests do not start PostgreSQL or `dotnet run`
+- [x] 3.3 Confirm tests do not start PostgreSQL or `dotnet run`
 
 ### Phase 4: Study-mode days + cookbook (risk #4)
 
