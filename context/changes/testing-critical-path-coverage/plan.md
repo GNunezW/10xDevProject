@@ -303,10 +303,10 @@ No database migrations. No `.sln` — CI Phase 4 (test-plan) will invoke the tes
 
 #### Automated
 
-- [x] 4.1 `dotnet test` — all Phase 2–4 tests pass
-- [x] 4.2 `dotnet build` — web project still 0 errors after generator one-liner
+- [x] 4.1 `dotnet test` — all Phase 2–4 tests pass — 742a0ba
+- [x] 4.2 `dotnet build` — web project still 0 errors after generator one-liner — 742a0ba
 
 #### Manual
 
-- [x] 4.3 Open `test-plan.md` §6: placeholders for 6.1 and 6.5 are gone
-- [x] 4.4 AGENTS.md shows the test command
+- [x] 4.3 Open `test-plan.md` §6: placeholders for 6.1 and 6.5 are gone — 742a0ba
+- [x] 4.4 AGENTS.md shows the test command — 742a0ba
