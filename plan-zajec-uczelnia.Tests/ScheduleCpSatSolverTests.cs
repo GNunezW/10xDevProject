@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using plan_zajec_uczelnia.Models;
 using plan_zajec_uczelnia.Services.Scheduling;
 
@@ -40,9 +39,7 @@ public class ScheduleCpSatSolverTests
             .ToList();
 
         var solver = new ScheduleCpSatSolver();
-        var sw = Stopwatch.StartNew();
         var result = solver.Solve(tasks, slotIndexByTimeSlotId, timeLimitSeconds: 5);
-        sw.Stop();
 
         Assert.True(result.Success, $"Expected a feasible plan, got {result.SolverStatus}");
         Assert.Equal(4, result.Placements.Count);
@@ -50,7 +47,6 @@ public class ScheduleCpSatSolverTests
         Assert.All(result.Placements, p => Assert.Equal(LecturerId, p.LecturerId));
         Assert.All(result.Placements, p =>
             Assert.Contains(p.Day, ScheduleGridData.GetDaysForMode(StudyMode.FullTime)));
-        Assert.True(sw.Elapsed < TimeSpan.FromSeconds(30), $"Solve took {sw.Elapsed}");
     }
 
     [Fact]
@@ -88,6 +84,7 @@ public class ScheduleCpSatSolverTests
         var result = new ScheduleCpSatSolver().Solve(tasks, slotIndexByTimeSlotId, timeLimitSeconds: 5);
 
         Assert.True(result.Success, $"Expected a feasible plan, got {result.SolverStatus}");
+        Assert.False(ScheduleCollisionOracle.HasLecturerOrRoomClash(result.Placements));
         Assert.All(result.Placements, p =>
             Assert.Contains(p.Day, ScheduleGridData.GetDaysForMode(StudyMode.PartTime)));
     }

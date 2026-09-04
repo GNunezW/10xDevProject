@@ -19,7 +19,7 @@ Lessons.md: do not spend budget on MudBlazor/UI tests.
 ## Desired End State
 
 - `plan-zajec-uczelnia.Tests/` sits **next to** the web project, targets `net10.0`, xUnit v3, `ProjectReference` to the web csproj, **no** `.sln`.
-- `dotnet test plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj` is green.
+- `dotnet test --project plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj` is green.
 - A fixture of 1 lecturer + 4 groups + enough weekly slots is **sufficient**; a slot shortage (same 1 lecturer) is **not**.
 - A collision oracle fails on a synthetic double-book and passes on a tiny in-process `Solve()` of 4 groups / 1 lecturer / distinct slots.
 - Generator uses `GetDaysForMode`; FullTime placements are weekdays; PartTime-shaped domains are weekends.
@@ -83,7 +83,7 @@ Create `plan-zajec-uczelnia.Tests/` sibling project so `dotnet test` exists. Del
 #### Automated Verification:
 
 - `dotnet new xunit3` (or equivalent) produces a project that restores
-- `dotnet test plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj` exits 0 after scaffold (template test may still be present)
+- `dotnet test --project plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj` exits 0 after scaffold (template test may still be present)
 
 #### Manual Verification:
 
@@ -207,7 +207,7 @@ Kill helper/generator drift. Assert days on **output**, not only the helper.
 
 **Intent**: Next agent knows where tests live and which oracle to copy. Allowed: this 10x change owns `context/` cookbook fill-in.
 
-**Contract**: §6.1 location `plan-zajec-uczelnia.Tests/`, naming `*Tests.cs`, run `dotnet test plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj`. §6.5: staffing / collision-oracle / mode-on-placements patterns with pointers to the new tests. AGENTS.md: add `dotnet test` next to `dotnet build`; remove “brak projektu testowego”. Do not rewrite test-plan §1–§2.
+**Contract**: §6.1 location `plan-zajec-uczelnia.Tests/`, naming `*Tests.cs`, run `dotnet test --project plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj`. §6.5: staffing / collision-oracle / mode-on-placements patterns with pointers to the new tests. AGENTS.md: add `dotnet test --project …` next to `dotnet build`; remove “brak projektu testowego”. Do not rewrite test-plan §1–§2.
 
 ### Success Criteria:
 
@@ -241,7 +241,7 @@ Kill helper/generator drift. Assert days on **output**, not only the helper.
 
 ### Manual Testing Steps:
 
-1. From repo root: `dotnet test plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj`
+1. From repo root: `dotnet test --project plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj`
 2. Confirm no Docker/Postgres required
 3. Spot-check cookbook paths match files on disk
 
@@ -271,7 +271,7 @@ No database migrations. No `.sln` — CI Phase 4 (test-plan) will invoke the tes
 #### Automated
 
 - [x] 1.1 `dotnet new xunit3` (or equivalent) produces a project that restores — 895fb5e
-- [x] 1.2 `dotnet test plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj` exits 0 after scaffold — 895fb5e
+- [x] 1.2 `dotnet test --project plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj` exits 0 after scaffold — 895fb5e
 
 #### Manual
 
