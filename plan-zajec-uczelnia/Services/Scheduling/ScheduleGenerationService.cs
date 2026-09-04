@@ -198,9 +198,7 @@ public class ScheduleGenerationService(
                 || roomNumbers.Count == 0)
                 continue;
 
-            var allowedDays = program.StudyMode == StudyMode.FullTime
-                ? new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday }
-                : new[] { DayOfWeek.Saturday, DayOfWeek.Sunday };
+            var allowedDays = ScheduleGridData.GetDaysForMode(program.StudyMode);
 
             var allowed = new List<ScheduleAssignment>();
             foreach (var subjectLecturer in subjectLecturers)

@@ -15,6 +15,7 @@ Plan Zajęć Uczelnia — MVP do planowania zajęć na uczelni (optymalizacja ok
 - `context/foundation/` — PRD, shape-notes, tech-stack, lessons
 - `context/changes/` — artefakty zmian (`/10x-new`, `/10x-archive`)
 - `plan-zajec-uczelnia/` — `@plan-zajec-uczelnia/plan-zajec-uczelnia.csproj`, API
+- `plan-zajec-uczelnia.Tests/` — xUnit v3; `dotnet test --project plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj`
 - `.cursor/skills/` — workflow 10xDevs
 
 Bootstrap log (ostatni przebieg 2026-05-21): `@context/changes/bootstrap-verification/verification.md`.
@@ -27,7 +28,9 @@ Z katalogu `plan-zajec-uczelnia/`:
 - `dotnet run` — dev server; pipeline w `@plan-zajec-uczelnia/Program.cs`
 - `dotnet list package --vulnerable` — audyt pakietów
 
-Brak projektu testowego — po dodaniu xUnit dopisz `dotnet test` tutaj.
+Z katalogu głównego repo:
+
+- `dotnet test --project plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj` — xUnit v3 (SDK 10 wymaga `--project`; `global.json` ustawia Microsoft.Testing.Platform)
 
 ## Coding conventions
 

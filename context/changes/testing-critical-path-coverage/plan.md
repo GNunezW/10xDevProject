@@ -292,21 +292,21 @@ No database migrations. No `.sln` — CI Phase 4 (test-plan) will invoke the tes
 
 #### Automated
 
-- [x] 3.1 `dotnet test` — oracle facts + Solve fixture pass
-- [x] 3.2 Solve fixture completes well under 60 s (target: a few seconds)
+- [x] 3.1 `dotnet test` — oracle facts + Solve fixture pass — b0b2ae5
+- [x] 3.2 Solve fixture completes well under 60 s (target: a few seconds) — b0b2ae5
 
 #### Manual
 
-- [x] 3.3 Confirm tests do not start PostgreSQL or `dotnet run`
+- [x] 3.3 Confirm tests do not start PostgreSQL or `dotnet run` — b0b2ae5
 
 ### Phase 4: Study-mode days + cookbook (risk #4)
 
 #### Automated
 
-- [ ] 4.1 `dotnet test` — all Phase 2–4 tests pass
-- [ ] 4.2 `dotnet build` — web project still 0 errors after generator one-liner
+- [x] 4.1 `dotnet test` — all Phase 2–4 tests pass
+- [x] 4.2 `dotnet build` — web project still 0 errors after generator one-liner
 
 #### Manual
 
-- [ ] 4.3 Open `test-plan.md` §6: placeholders for 6.1 and 6.5 are gone
-- [ ] 4.4 AGENTS.md shows the test command
+- [x] 4.3 Open `test-plan.md` §6: placeholders for 6.1 and 6.5 are gone
+- [x] 4.4 AGENTS.md shows the test command
