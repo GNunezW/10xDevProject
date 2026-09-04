@@ -112,6 +112,19 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
 
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true || IsAnonymousPath(context.Request.Path))
+    {
+        await next();
+        return;
+    }
+
+    var returnUrl = Uri.EscapeDataString(
+        context.Request.Path + context.Request.QueryString);
+    context.Response.Redirect($"/login?ReturnUrl={returnUrl}");
+});
+
 app.MapAuthEndpoints();
 app.MapAccountEndpoints();
 app.MapScheduleEndpoints();
@@ -142,6 +155,16 @@ app.MapGet("/weatherforecast", () =>
 .AllowAnonymous();
 
 app.Run();
+
+static bool IsAnonymousPath(PathString path) =>
+    path.StartsWithSegments("/login")
+    || path.StartsWithSegments("/account")
+    || path.StartsWithSegments("/auth")
+    || path.StartsWithSegments("/_blazor")
+    || path.StartsWithSegments("/_framework")
+    || path.StartsWithSegments("/_content")
+    || path.StartsWithSegments("/weatherforecast")
+    || path.StartsWithSegments("/.well-known");
 
 static async Task SeedCoordinatorAsync(WebApplication app)
 {
