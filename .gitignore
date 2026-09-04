@@ -5,3 +5,10 @@
 **/Properties.scaffold/
 plan-zajec-uczelnia/short-solstice/
 **/.idea/
+
+# Local git worktrees for parallel PRs — not part of the app
+/10x-project-ci/
+/10x-project-tests/
+
+# Cursor afterFileEdit hook run log
+.cursor/hooks/after-file-edit.log
