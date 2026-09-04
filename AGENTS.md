@@ -31,6 +31,7 @@ Z katalogu `plan-zajec-uczelnia/`:
 Z katalogu głównego repo:
 
 - `dotnet test --project plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj` — xUnit v3 (SDK 10 wymaga `--project`; `global.json` ustawia Microsoft.Testing.Platform)
+- `npx playwright test --project=anonymous` — E2E bez sesji (wymaga `dotnet run` na http://localhost:5223)
 
 ## Coding conventions
 

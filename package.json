@@ -1,0 +1,11 @@
+{
+  "name": "plan-zajec-uczelnia-e2e",
+  "private": true,
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:anonymous": "playwright test --project=anonymous"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0"
+  }
+}

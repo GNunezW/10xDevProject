@@ -14,9 +14,10 @@ TestResults/
 # Cursor afterFileEdit hook run log
 .cursor/hooks/after-file-edit.log
 
-# Local git worktrees for parallel PRs — not part of the app
-/10x-project-ci/
-/10x-project-tests/
-
-# Cursor afterFileEdit hook run log
-.cursor/hooks/after-file-edit.log
+# Playwright E2E
+node_modules/
+playwright/.auth/
+playwright-report/
+test-results/
+blob-report/
+.playwright-cli/
