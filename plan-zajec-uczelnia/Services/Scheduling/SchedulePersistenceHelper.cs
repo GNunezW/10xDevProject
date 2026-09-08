@@ -1,10 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using plan_zajec_uczelnia.Data;
 using plan_zajec_uczelnia.Models;
 
 namespace plan_zajec_uczelnia.Services.Scheduling;
 
-internal static class SchedulePersistenceHelper
+public static class SchedulePersistenceHelper
 {
     private const int LegacyErrorMessageMaxLength = 2000;
     private const int ExpandedErrorMessageMaxLength = 8000;
@@ -27,12 +28,25 @@ internal static class SchedulePersistenceHelper
             _ => ex.Message
         };
 
+    public static void DiscardPendingSessions(ApplicationDbContext db)
+    {
+        foreach (var entry in db.ChangeTracker.Entries<ScheduledSession>()
+                     .Where(e => e.State == EntityState.Added)
+                     .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
+    }
+
     public static async Task SaveFailedRunAsync(
         ApplicationDbContext db,
         ScheduleRun run,
         string message,
-        CancellationToken ct)
+        CancellationToken ct,
+        ILogger? logger = null)
     {
+        DiscardPendingSessions(db);
+
         run.Status = ScheduleRunStatus.Failed;
         run.CompletedAt = DateTime.UtcNow;
 
@@ -44,9 +58,12 @@ internal static class SchedulePersistenceHelper
                 await db.SaveChangesAsync(ct);
                 return;
             }
-            catch (DbUpdateException) when (maxLen > LegacyErrorMessageMaxLength)
+            catch (DbUpdateException ex) when (maxLen > LegacyErrorMessageMaxLength)
             {
-                // Kolumna w bazie nadal varchar(2000) — spróbuj krótszej wersji.
+                logger?.LogWarning(
+                    ex,
+                    "Could not persist failed schedule run error at maxLen {MaxLen}; retrying shorter message.",
+                    maxLen);
             }
         }
 

@@ -6,7 +6,8 @@ namespace plan_zajec_uczelnia.Services.Scheduling;
 
 public class ScheduleGenerationService(
     ApplicationDbContext db,
-    IScheduleValidationService validation) : IScheduleGenerationService
+    IScheduleValidationService validation,
+    ILogger<ScheduleGenerationService> logger) : IScheduleGenerationService
 {
     private const int SolverTimeLimitSeconds = 60;
     private static readonly SemaphoreSlim GenerationLock = new(1, 1);
@@ -86,6 +87,7 @@ public class ScheduleGenerationService(
                 }
                 catch (Exception ex)
                 {
+                    logger.LogError(ex, "Infeasibility diagnostics failed for schedule run {RunId}", run.Id);
                     message = $"Nie znaleziono planu spełniającego ograniczenia. (Błąd diagnostyki: {ex.Message})";
                 }
 
@@ -116,6 +118,7 @@ public class ScheduleGenerationService(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Schedule generation failed for run {RunId}", run.Id);
             await FailRunAsync(run, SchedulePersistenceHelper.FormatException(ex), cancellationToken);
             return run;
         }
@@ -137,7 +140,7 @@ public class ScheduleGenerationService(
     }
 
     private Task FailRunAsync(ScheduleRun run, string message, CancellationToken ct) =>
-        SchedulePersistenceHelper.SaveFailedRunAsync(db, run, message, ct);
+        SchedulePersistenceHelper.SaveFailedRunAsync(db, run, message, ct, logger);
 
     private async Task<List<PlacementTask>> BuildPlacementTasksAsync(CancellationToken ct)
     {
