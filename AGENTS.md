@@ -16,7 +16,7 @@ Plan Zajęć Uczelnia — MVP do planowania zajęć na uczelni (optymalizacja ok
 - `context/changes/` — artefakty zmian (`/10x-new`, `/10x-archive`)
 - `plan-zajec-uczelnia/` — `@plan-zajec-uczelnia/plan-zajec-uczelnia.csproj`, API
 - `plan-zajec-uczelnia.Tests/` — xUnit v3 (obsada, kolizje, tryb studiów, WeekCalculator); `dotnet test --project plan-zajec-uczelnia.Tests/plan-zajec-uczelnia.Tests.csproj`
-- `.cursor/skills/` — workflow 10xDevs
+- `.cursor/skills/` — lokalny toolkit 10xDevs (`10x get`), poza gitem
 
 Bootstrap log (ostatni przebieg 2026-05-21): `@context/changes/bootstrap-verification/verification.md`.
 
