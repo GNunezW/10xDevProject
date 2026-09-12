@@ -10,7 +10,7 @@
 <MudText Typo="Typo.h5" GutterBottom="true">Generowanie planu zajęć</MudText>
 
 <MudText Typo="Typo.body2" Class="mb-4">
-    Jedno uruchomienie układa <strong>plan tygodniowy</strong> (powtarzalny co tydzień przez semestr) dla wszystkich kierunków. Limit solvera: 60 s.
+    Jedno uruchomienie układa <strong>plan tygodniowy</strong> (powtarzalny co tydzień przez semestr) dla wszystkich kierunków. Limit solvera: 2 min.
 </MudText>
 
 @if (_validation is not null)
@@ -40,7 +40,7 @@
 @if (_generating)
 {
     <MudProgressLinear Indeterminate="true" Class="mb-4" />
-    <MudText>Trwa generowanie (do 60 s)…</MudText>
+    <MudText>Trwa generowanie (do 2 min)…</MudText>
 }
 
 @if (!string.IsNullOrEmpty(_lastError))

@@ -9,7 +9,7 @@ public class ScheduleGenerationService(
     IScheduleValidationService validation,
     ILogger<ScheduleGenerationService> logger) : IScheduleGenerationService
 {
-    private const int SolverTimeLimitSeconds = 60;
+    private const int SolverTimeLimitSeconds = 120;
     private static readonly SemaphoreSlim GenerationLock = new(1, 1);
 
     public async Task<ScheduleRun> GenerateAsync(CancellationToken cancellationToken = default)

@@ -38,7 +38,7 @@ public static class ScheduleInfeasibilityDiagnostics
         if (solverStatus is CpSolverStatus.Unknown or CpSolverStatus.ModelInvalid)
         {
             issues.Add(
-                "Solver nie zdążył znaleźć planu w limicie czasu (60 s) — spróbuj zmniejszyć liczbę przedmiotów/sesji lub zwiększ dostępność prowadzących.");
+                "Solver nie zdążył znaleźć planu w limicie czasu (2 min) — spróbuj zmniejszyć liczbę przedmiotów/sesji lub zwiększ dostępność prowadzących.");
         }
         else if (solverStatus == CpSolverStatus.Infeasible)
         {

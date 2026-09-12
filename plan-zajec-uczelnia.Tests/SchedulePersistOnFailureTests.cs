@@ -27,7 +27,7 @@ public class SchedulePersistOnFailureTests
         {
             StartedAt = DateTime.UtcNow,
             Status = ScheduleRunStatus.Running,
-            SolverTimeLimitSeconds = 60
+            SolverTimeLimitSeconds = 120
         };
         db.ScheduleRuns.Add(run);
         await db.SaveChangesAsync(ct);

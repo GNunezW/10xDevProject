@@ -96,10 +96,43 @@ builder.Services.AddScoped<IScheduleExportService, ScheduleExportService>();
 
 var app = builder.Build();
 
-await SeedCoordinatorAsync(app);
-await ChemicalTechnologySeed.SeedAsync(app.Services);
-await ComputerScienceSeed.SeedAsync(app.Services);
-await CleanupStaleScheduleRunsAsync(app);
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/health"))
+    {
+        context.Response.StatusCode = StatusCodes.Status200OK;
+        context.Response.ContentType = "text/plain";
+        await context.Response.WriteAsync("ok");
+        return;
+    }
+
+    await next();
+});
+
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    _ = Task.Run(async () =>
+    {
+        try
+        {
+            await using var migrateScope = app.Services.CreateAsyncScope();
+            var db = migrateScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await db.Database.MigrateAsync();
+            await SeedCoordinatorAsync(app);
+            if (app.Environment.IsDevelopment())
+            {
+                await ChemicalTechnologySeed.SeedAsync(app.Services);
+                await ComputerScienceSeed.SeedAsync(app.Services);
+            }
+
+            await CleanupStaleScheduleRunsAsync(app);
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogError(ex, "Startup database migrate/seed failed; site is still listening.");
+        }
+    });
+});
 
 if (app.Environment.IsDevelopment())
 {
@@ -139,6 +172,8 @@ var summaries = new[]
     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
 };
 
+app.MapGet("/health", () => Results.Text("ok")).AllowAnonymous();
+
 app.MapGet("/weatherforecast", () =>
 {
     var forecast = Enumerable.Range(1, 5).Select(index =>
@@ -164,6 +199,7 @@ static bool IsAnonymousPath(PathString path) =>
     || path.StartsWithSegments("/_framework")
     || path.StartsWithSegments("/_content")
     || path.StartsWithSegments("/weatherforecast")
+    || path.StartsWithSegments("/health")
     || path.StartsWithSegments("/.well-known");
 
 static async Task SeedCoordinatorAsync(WebApplication app)
@@ -198,7 +234,7 @@ static async Task CleanupStaleScheduleRunsAsync(WebApplication app)
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    var cutoff = DateTime.UtcNow.AddMinutes(-2);
+    var cutoff = DateTime.UtcNow.AddMinutes(-5);
 
     var staleRuns = await db.ScheduleRuns
         .Where(r => r.Status == ScheduleRunStatus.Running && r.StartedAt < cutoff)

@@ -15,7 +15,7 @@ public class ScheduleRun
     [MaxLength(8000)]
     public string? ErrorMessage { get; set; }
 
-    public int SolverTimeLimitSeconds { get; set; } = 60;
+    public int SolverTimeLimitSeconds { get; set; } = 120;
 
     public ICollection<ScheduledSession> ScheduledSessions { get; set; } = [];
 }
