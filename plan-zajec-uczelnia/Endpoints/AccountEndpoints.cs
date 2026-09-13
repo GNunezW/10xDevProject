@@ -33,6 +33,12 @@ public static class AccountEndpoints
             var target = string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl;
             return Results.Redirect(target);
         }).DisableAntiforgery();
+
+        account.MapPost("/logout", async (SignInManager<AppUser> signInManager) =>
+        {
+            await signInManager.SignOutAsync();
+            return Results.Redirect("/login");
+        }).DisableAntiforgery();
     }
 
     private static string BuildLoginRedirect(string error, string? returnUrl)
