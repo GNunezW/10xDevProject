@@ -11,14 +11,26 @@ TestResults/
 /10x-project-ci/
 /10x-project-tests/
 
-# Cursor afterFileEdit hook run log
-.cursor/hooks/after-file-edit.log
+# Local Cursor config — machine-specific, not the product
+.cursor/hooks.json
+.cursor/hooks/
+.cursor/mcp.json
 
 # 10xDevs CLI toolkit — local only, re-fetch with `10x get`
 .cursor/skills/
 .cursor/prompts/
 .cursor/rules/10x-course.mdc
 .cursor/.10x-cli-manifest.json
+
+# Local publish / deploy artifacts — recreate with `dotnet publish`
+plan-zajec-uczelnia/publish/
+plan-zajec-uczelnia/deploy.zip
+
+# Unrelated tree that must not land in this repo
+/notepad-plus-plus/
+
+# Generated 10x repo-map output
+/context/map/
 
 # Playwright E2E
 node_modules/

@@ -3,7 +3,7 @@ project: "Plan Zajęć Uczelnia"
 version: 1
 status: draft
 created: 2026-05-27
-updated: 2026-09-02
+updated: 2026-09-13
 prd_version: 8
 main_goal: speed
 top_blocker: decisions
@@ -29,13 +29,13 @@ Koordynator planowania na uczelni spędza tygodnie na ręcznym układaniu planu 
 
 | ID | Change ID | Outcome (koordynator może …) | Prerequisites | PRD refs | Status |
 |---|---|---|---|---|---|
-| F-01 | secure-api-routes | (foundation) wszystkie trasy API wymagają ważnego tokenu JWT | — | FR-001 | ready |
-| S-01 | subjects-lecturers-and-grid | definiować kierunki studiów i zarządzać listą przedmiotów przypisanych do kierunku i semestru z prowadzącymi oraz siatką godzin | F-01 | FR-002, FR-003, FR-007, FR-008, US-01 | implemented |
-| S-02 | lecturer-availability | wprowadzać dostępność prowadzących na okres planowania | S-01 | FR-004, US-01 | implemented |
+| F-01 | secure-api-routes | (foundation) wszystkie trasy API wymagają ważnego tokenu JWT | — | FR-001 | done |
+| S-01 | subjects-lecturers-and-grid | definiować kierunki studiów i zarządzać listą przedmiotów przypisanych do kierunku i semestru z prowadzącymi oraz siatką godzin | F-01 | FR-002, FR-003, FR-007, FR-008, US-01 | done |
+| S-02 | lecturer-availability | wprowadzać dostępność prowadzących na okres planowania | S-01 | FR-004, US-01 | done |
 | S-03 | rooms-model-and-preferences | wprowadzać sale (numer + typ zajęć); bez macierzy dostępności i preferencji (wariant A) | S-01 | FR-005, US-01 | done |
 | S-04 | import-scheduling-data | zaimportować dane planowania z pliku | F-01 | FR-009 | parked |
-| S-05 | generate-and-view-schedule | uruchomić generowanie planów zajęć (jedno uruchomienie, siatka per kierunek) i zobaczyć wyniki z metrykami okienek | S-01, S-02, S-03 | FR-010, FR-011, US-01 | impl_reviewed |
-| S-06 | export-schedule | wyeksportować wygenerowany plan | S-05 | FR-012 | implemented |
+| S-05 | generate-and-view-schedule | uruchomić generowanie planów zajęć (jedno uruchomienie, siatka per kierunek) i zobaczyć wyniki z metrykami okienek | S-01, S-02, S-03 | FR-010, FR-011, US-01 | done |
+| S-06 | export-schedule | wyeksportować wygenerowany plan | S-05 | FR-012 | done |
 | F-02 | ci-github-actions | (foundation) `dotnet build` na GitHub Actions przy PR/push | — | tech-stack CI | planned |
 | F-03 | xunit-smoke-tests | (foundation) `dotnet test` dla czystej logiki szablonu tygodnia i trybu studiów | — | lessons / agent-readiness | planned |
 
@@ -74,7 +74,7 @@ Fundamenty poniżej zakładają, że te warstwy są na miejscu i ich NIE reskaff
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Auth jest partial — Identity i JWT wdrożone, ale trasy niezabezpieczone. Pominięcie tego fundamentu oznacza, że każdy slice z danymi zostanie wdrożony bez ochrony. Najprostszy krok do zamknięcia luki przed wdrożeniem danych produkcyjnych.
-- **Status:** ready
+- **Status:** done
 
 ### F-02: CI — GitHub Actions (build)
 
@@ -117,7 +117,7 @@ Fundamenty poniżej zakładają, że te warstwy są na miejscu i ich NIE reskaff
 - **Unknowns:** —
 - **Risk:** Dane z tego slice'a są wejściem dla każdego kolejnego slice'a. Model danych StudyProgram + Subject zamknięty (2026-06-01). Błąd w tym modelu cofnie pracę nad S-02, S-03 i S-05. Ten slice jako pierwszy wdraża Blazor Server + MudBlazor do projektu — setup jednorazowy tutaj.
 - **UI (Blazor):** lista kierunków (MudDataGrid) + formularz dodawania/edycji (MudDialog); lista przedmiotów per kierunek + formularz; siatka godzin jako osobna strona.
-- **Status:** implemented
+- **Status:** done
 
 ### S-02: Dostępność prowadzących
 
@@ -130,7 +130,7 @@ Fundamenty poniżej zakładają, że te warstwy są na miejscu i ich NIE reskaff
 - **Unknowns:** —
 - **Risk:** Dostępność prowadzących jest twardym ograniczeniem solvera. Brak tych danych = solver nie może generować poprawnego planu. Sekwencjonowane przed S-05.
 - **UI (Blazor):** lista prowadzących (MudDataGrid) + formularz dostępności (sloty jako checkboxy lub MudTimePicker).
-- **Status:** implemented
+- **Status:** done
 
 ### S-03: Model sal (wariant A)
 
@@ -169,7 +169,7 @@ Fundamenty poniżej zakładają, że te warstwy są na miejscu i ich NIE reskaff
 - **Unknowns:** —
 - **Risk:** Gwiazda przewodnia — solver CP-SAT, limit 60 s, szablon tygodnia. Model sal wariant A (PRD v6).
 - **UI (Blazor):** `/generuj-plan` + spinner; `/plan/{id}` siatka + metryki okienek (MudBlazor defaults).
-- **Status:** impl_reviewed
+- **Status:** done
 
 ### S-06: Eksport planu
 
@@ -182,19 +182,19 @@ Fundamenty poniżej zakładają, że te warstwy są na miejscu i ich NIE reskaff
 - **Unknowns:** —
 - **Risk:** Bez eksportu plan nie trafia do procesu uczelni. Format: Excel `.xlsx` (ClosedXML), jeden plik per kierunek.
 - **UI (Blazor):** przycisk "Pobierz Excel" na `/plan/{runId}` obok wyboru kierunku; GET `/plan/{runId}/eksport` zwraca `.xlsx`.
-- **Status:** implemented
+- **Status:** done
 
 ## Backlog Handoff
 
 | Roadmap ID | Change ID | Sugerowany tytuł issue | Gotowe do `/10x-plan` | Uwagi |
 |---|---|---|---|---|
-| F-01 | secure-api-routes | Zabezpiecz trasy API tokenem JWT | — | Zaimplementowane ✓ |
-| S-01 | subjects-lecturers-and-grid | CRUD: kierunki, przedmioty, prowadzący, siatka godzin | — | implemented |
-| S-02 | lecturer-availability | CRUD: dostępność prowadzących | — | implemented |
+| F-01 | secure-api-routes | Zabezpiecz trasy API tokenem JWT | — | done (zarchiwizowane) |
+| S-01 | subjects-lecturers-and-grid | CRUD: kierunki, przedmioty, prowadzący, siatka godzin | — | done (zarchiwizowane) |
+| S-02 | lecturer-availability | CRUD: dostępność prowadzących | — | done (zarchiwizowane) |
 | S-03 | rooms-model-and-preferences | CRUD: sale numer + typ (wariant A) | — | done (zarchiwizowane) |
 | S-04 | import-scheduling-data | Import danych planowania z pliku | nie | Parked — FR-009 poza MVP (PRD v7) |
-| S-05 | generate-and-view-schedule | Generowanie + podgląd z metrykami okienek | — | impl_reviewed; research 2026-08-27 |
-| S-06 | export-schedule | Eksport wygenerowanego planu (Excel) | — | implemented (2026-08-28) |
+| S-05 | generate-and-view-schedule | Generowanie + podgląd z metrykami okienek | — | done (zarchiwizowane) |
+| S-06 | export-schedule | Eksport wygenerowanego planu (Excel) | — | done (zarchiwizowane) |
 | F-02 | ci-github-actions | GitHub Actions: restore + build (bez deploy, bez test) | tak | Parallel z F-03; tylko `.github/workflows/` |
 | F-03 | xunit-smoke-tests | xUnit: WeekCalculator + GetDaysForMode (bez DB) | tak | Parallel z F-02; tylko nowy projekt testowy |
 
@@ -218,4 +218,10 @@ Fundamenty poniżej zakładają, że te warstwy są na miejscu i ich NIE reskaff
 
 ## Done
 
+- **F-01: (foundation) wszystkie trasy API obsługujące dane planowania i generowanie wymagają ważnego tokenu JWT** — Zarchiwizowano 2026-09-13 → `context/archive/2026-05-31-secure-api-routes/`. Lekcja: —.
+- **S-01: koordynator może definiować kierunki studiów (StudyProgram) i zarządzać listą przedmiotów** — Zarchiwizowano 2026-09-13 → `context/archive/2026-06-01-subjects-lecturers-and-grid/`. Lekcja: —.
+- **S-02: koordynator może wprowadzać dostępność prowadzących na okres planowania** — Zarchiwizowano 2026-09-13 → `context/archive/2026-06-01-lecturer-availability/`. Lekcja: —.
 - **S-03: koordynator może wprowadzać sale (numer + typ zajęć), bez dostępności per slot i bez preferencji** — Zarchiwizowano 2026-06-02 → `context/archive/2026-06-01-rooms-model-and-preferences/`. PRD v6 (2026-08-28) zrównał FR-005/FR-006 z tym wariantem.
+- **S-05: koordynator może uruchomić jedno generowanie planu i zobaczyć szablon tygodnia z metrykami okienek** — Zarchiwizowano 2026-09-13 → `context/archive/2026-06-02-generate-and-view-schedule/`. Lekcja: —.
+- **S-06: koordynator może wyeksportować wygenerowany plan do pliku** — Zarchiwizowano 2026-09-13 → `context/archive/2026-08-28-export-schedule/`. Lekcja: —.
+- **testing-critical-path-coverage: Phase 1 test rollout (obsada, kolizje, tryb studiów)** — Zarchiwizowano 2026-09-13 → `context/archive/2026-09-03-testing-critical-path-coverage/`. Lekcja: —.

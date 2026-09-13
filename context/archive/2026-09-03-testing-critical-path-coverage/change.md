@@ -1,10 +1,10 @@
 ---
 change_id: testing-critical-path-coverage
 title: Rollout Phase 1 — Critical-path coverage (obsada grup, kolizje, tryb studiów)
-status: impl_reviewed
+status: archived
 created: 2026-09-03
-updated: 2026-09-04
-archived_at: null
+updated: 2026-09-13
+archived_at: 2026-09-13T08:42:00Z
 ---
 
 ## Notes

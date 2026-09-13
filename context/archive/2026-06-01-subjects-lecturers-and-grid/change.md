@@ -1,9 +1,10 @@
 ---
 id: subjects-lecturers-and-grid
 title: Kierunki, przedmioty, prowadzący i siatka godzin (S-01)
-status: implemented
+status: archived
 created: 2026-06-01
-updated: 2026-06-01
+updated: 2026-09-13
+archived_at: 2026-09-13T08:42:00Z
 roadmap-ref: S-01
 prd-refs: FR-002, FR-003, FR-007, FR-008
 ---
